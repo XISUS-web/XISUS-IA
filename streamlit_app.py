@@ -49,3 +49,7 @@ if pregunta := st.chat_input("De que quieres hablar hoy, tienes a tu calvito a d
 
     # Enviar a Google con AGREGA ESTÉTICA: Animación de "pensando..."
     with st.chat_message("assistant"):
+        with st.spinner("XISUS está pensando..."):
+            respuesta = st.session_state.chat.send_message(pregunta)
+            st.markdown(respuesta.text)
+        st.session_state.historial.append({"rol": "assistant", "texto": respuesta.text})
