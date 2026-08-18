@@ -18,7 +18,7 @@ if "historial" not in st.session_state:
 
 # 2. AGREGA ESTÉTICA: Barra lateral izquierda para Ernest
 with st.sidebar:
-    st.image("https://flaticon.com", width=90)
+    st.image("https://i.postimg.cc/ZR3kqszT/IMG-20260818-WA0020.jpg", width=90)
     st.title("⚙️ Configuración")
     st.markdown("---")
     st.subheader("Desarrollador:")
