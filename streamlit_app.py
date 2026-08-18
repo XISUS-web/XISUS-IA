@@ -6,7 +6,7 @@ from google import genai
 st.set_page_config(page_title="XISUS", page_icon="👩‍🦲", layout="centered")
 
 # Tu llave API real
-LLAVE_API = st.secrets"GEMINI_API_KEY"
+LLAVE_API = st.secrets["GEMINI_API_KEY"]
 
 # Inicializamos el cliente de Google y el historial de chat en la web
 if "client" not in st.session_state:
