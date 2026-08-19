@@ -11,7 +11,7 @@ LLAVE_API = st.secrets["GEMINI_API_KEY"]
 
 if "client" not in st.session_state:
     st.session_state.client = genai.Client(api_key=LLAVE_API)
-    st.session_state.chat = st.session_state.client.chats.create(model="gemini-3.6-flash")
+   st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")
 
 if "historial" not in st.session_state:
     st.session_state.historial = []
