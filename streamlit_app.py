@@ -22,7 +22,7 @@ with st.sidebar:
     st.title("⚙️ Configuración")
     st.markdown("---")
     st.subheader("Desarrollador:")
-    st.info("Creado con orgullo por **Ernest** 🚀")
+    st.info("Creado con orgullo por **Ernesto** 🚀")
     
     # Botón estético para vaciar la pantalla si se llena de texto
     if st.button("🗑️ Limpiar Historial", use_container_width=True):
