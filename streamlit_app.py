@@ -5,15 +5,11 @@ st.set_page_config(page_title="XISUS", page_icon="👩‍🦲", layout="centered
 
 LLAVE_API = st.secrets["GEMINI_API_KEY"]
 
-if "client" not in st.session_state:
-st.session_state.client = genai.Client(api_key=LLAVE_API)
-st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")
-
-if "historial" not in st.session_state:
-st.session_state.historial = []
+if "client" not in st.session_state: st.session_state.client = genai.Client(api_key=LLAVE_API)
+if "chat" not in st.session_state: st.session_state.chat = st.session_state.client.chats.create(model="gemini-2.5-flash")
+if "historial" not in st.session_state: st.session_state.historial = []
 
 with st.sidebar:
-st.image("https://postimg.cc", width=90)
 st.title("⚙️ Configuración")
 st.markdown("---")
 st.subheader("Desarrollador:")
@@ -35,26 +31,19 @@ with st.chat_message(mensaje["rol"]):
 st.markdown(mensaje["texto"])
 
 if pregunta := st.chat_input("De que quieres hablar hoy, tienes a tu calvito a disposicion"):
-with st.chat_message("user"):
-st.markdown(pregunta)
+st.session_state.historial.append({"rol": "user", "texto": pregunta})
 
 ```
-st.session_state.historial.append({
-    "rol": "user",
-    "texto": pregunta
-})
+with st.chat_message("user"):
+    st.markdown(pregunta)
 
 with st.chat_message("assistant"):
     with st.spinner("XISUS está pensando..."):
         try:
             respuesta = st.session_state.chat.send_message(pregunta)
-            st.markdown(respuesta.text)
-
-            st.session_state.historial.append({
-                "rol": "assistant",
-                "texto": respuesta.text
-            })
-
+            texto = respuesta.text
+            st.markdown(texto)
+            st.session_state.historial.append({"rol": "assistant", "texto": texto})
         except Exception as e:
             st.error(f"Error de Gemini: {type(e).__name__}")
             st.code(str(e))
