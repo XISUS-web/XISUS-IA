@@ -34,8 +34,6 @@ st.session_state.modelo = modelo
 
 st.sidebar.markdown("---")
 
-st.sidebar.subheader("💬 Conversación")
-
 if st.sidebar.button("🆕 Nueva conversación", use_container_width=True):
 st.session_state.historial = []
 st.rerun()
@@ -44,20 +42,8 @@ if st.sidebar.button("🗑️ Borrar historial", use_container_width=True):
 st.session_state.historial = []
 st.rerun()
 
-st.sidebar.markdown("---")
-
-st.sidebar.subheader("👩‍🦲 XISUS")
-
-st.sidebar.info(
-"Tu calvito de confianza 🤖\n\n"
-"Selecciona el modelo que quieras utilizar "
-"desde el menú de arriba."
-)
-
 st.markdown(
-"<h1 style='text-align:center;color:#FF4B4B;'>"
-"👩‍🦲 XISUS"
-"</h1>",
+"<h1 style='text-align:center;color:#FF4B4B;'>👩‍🦲 XISUS</h1>",
 unsafe_allow_html=True
 )
 
@@ -73,9 +59,7 @@ st.markdown("---")
 for mensaje in st.session_state.historial:
 st.chat_message(mensaje["rol"]).write(mensaje["texto"])
 
-pregunta = st.chat_input(
-"¿De qué quieres hablar hoy? 😎"
-)
+pregunta = st.chat_input("¿De qué quieres hablar hoy? 😎")
 
 resultado = cliente.models.generate_content(
 model=st.session_state.modelo,
