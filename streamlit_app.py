@@ -11,6 +11,6 @@ st.write("¡Bienvenido! Chatea con XISUS.")
 
 pregunta = st.chat_input("De que quieres hablar hoy, tienes a tu calvito a disposicion")
 
-if pregunta is not None:
-respuesta = cliente.models.generate_content(model="gemini-2.5-flash", contents=pregunta)
-st.write(respuesta.text)
+respuesta = cliente.models.generate_content(model="gemini-2.5-flash", contents=pregunta) if pregunta else None
+
+st.write(respuesta.text if respuesta else "")
