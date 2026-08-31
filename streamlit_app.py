@@ -12,26 +12,8 @@ st.caption("Tu calvito de confianza 🤖")
 
 pregunta = st.chat_input("Escribe algo...")
 
-if pregunta:
-st.chat_message("user").write(pregunta)
+resultado = cliente.models.generate_content(model="gemini-3.5-flash", contents=pregunta) if pregunta else None
 
-```
-try:
-    resultado = cliente.models.generate_content(
-        model="gemini-3.5-flash",
-        contents=pregunta
-    )
+st.chat_message("user").write(pregunta) if pregunta else None
 
-    respuesta = resultado.text
-
-    st.chat_message("assistant").write(respuesta)
-
-except Exception as error:
-    st.chat_message("assistant").error(
-        "😵‍💫 XISUS no ha podido responder en este momento."
-    )
-    st.info(
-        "Gemini está teniendo problemas temporalmente. "
-        "Prueba de nuevo dentro de unos segundos."
-    )
-```
+st.chat_message("assistant").write(resultado.text) if resultado else None
