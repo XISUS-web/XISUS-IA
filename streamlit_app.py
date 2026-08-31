@@ -13,9 +13,9 @@ st.caption("Tu calvito de confianza 🤖")
 pregunta = st.chat_input("Escribe algo...")
 
 if pregunta:
-st.chat_message("user").write(pregunta)
+ st.chat_message("user").write(pregunta)
 
-```
+
 try:
     resultado = cliente.models.generate_content(
         model="gemini-3.5-flash",
@@ -27,7 +27,7 @@ try:
 except Exception as e:
     st.error("😕 XISUS ha tenido un problema al comunicarse con Gemini.")
     st.caption("Puedes intentar enviar la pregunta de nuevo.")
-```
+
 
 st.markdown("---")
 st.subheader("⚙️ Configuración de XISUS")
