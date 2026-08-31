@@ -24,10 +24,20 @@ modelo = st.sidebar.selectbox(
 
 pregunta = st.chat_input("¿De qué quieres hablar hoy? 😎")
 
+respuesta = None
+
+if pregunta:
+try:
 respuesta = cliente.models.generate_content(
 model=modelo,
 contents=pregunta
-) if pregunta else None
+)
+st.write(respuesta.text)
+except Exception as error:
+st.error("❌ Gemini ha dado un error")
+st.write("Tipo de error:", type(error).name)
+st.write("Código:", getattr(error, "status_code", "No disponible"))
+st.write("Detalles:", str(error))
 
 st.write(respuesta.text if respuesta else "👋 ¡Hola! Escribe algo para comenzar.")
 
