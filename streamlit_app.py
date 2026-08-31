@@ -12,18 +12,46 @@ st.caption("Tu calvito de confianza 🤖")
 
 pregunta = st.chat_input("Escribe algo...")
 
-resultado = cliente.models.generate_content(model="gemini-3.5-flash", contents=pregunta) if pregunta else None
+if pregunta:
+st.chat_message("user").write(pregunta)
 
-st.chat_message("user").write(pregunta) if pregunta else None
+```
+try:
+    resultado = cliente.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=pregunta
+    )
 
-st.chat_message("assistant").write(resultado.text) if resultado else None
+    st.chat_message("assistant").write(resultado.text)
+
+except Exception as e:
+    st.error("😕 XISUS ha tenido un problema al comunicarse con Gemini.")
+    st.caption("Puedes intentar enviar la pregunta de nuevo.")
+```
 
 st.markdown("---")
 st.subheader("⚙️ Configuración de XISUS")
 
-modelo_visual = st.selectbox("🧠 Modelo", ["gemini-3.5-flash", "gemini-3.5-flash-lite", "gemini-3.6-flash", "gemini-3.7-flash"])
+modelo_visual = st.selectbox(
+"🧠 Modelo",
+[
+"gemini-3.5-flash",
+"gemini-3.5-flash-lite",
+"gemini-3.6-flash",
+"gemini-3.7-flash"
+]
+)
 
-personalidad_visual = st.selectbox("🎨 Personalidad", ["Normal", "Amigable", "Profesional", "Divertido", "Conciso"])
+personalidad_visual = st.selectbox(
+"🎨 Personalidad",
+[
+"Normal",
+"Amigable",
+"Profesional",
+"Divertido",
+"Conciso"
+]
+)
 
 st.markdown("---")
 st.subheader("💬 Estado de XISUS")
