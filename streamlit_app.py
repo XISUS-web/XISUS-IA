@@ -17,7 +17,7 @@ error = None
 resultado = None
 if pregunta:
     try:
-        resultado = cliente.models.generate_content(model="gemini-2.5-flash", contents=pregunta)
+        resultado = cliente.models.generate_content(model="gemini-3.6-flash", contents=pregunta)
     except Exception as e:
         st.write("ERROR:", type(e).__name__, getattr(e, "status_code", "SIN CÓDIGO"), str(e))
 
