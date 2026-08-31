@@ -20,7 +20,7 @@ modelo = st.sidebar.selectbox(
 ]
 )
 
-temperatura = st.sidebar.slider("🌡️ Creatividad", 0.0, 2.0, 0.7, 0.1)
+
 
 pregunta = st.chat_input("¿De qué quieres hablar hoy? 😎")
 
