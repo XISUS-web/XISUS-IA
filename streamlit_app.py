@@ -16,40 +16,22 @@ if pregunta:
 st.chat_message("user").write(pregunta)
 
 ```
-modelos = [
-    "gemini-3.7-flash",
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
-    "gemini-3.5-flash-lite"
-]
+try:
+    resultado = cliente.models.generate_content(
+        model="gemini-3.5-flash",
+        contents=pregunta
+    )
 
-respuesta = None
-modelo_usado = None
+    respuesta = resultado.text
 
-with st.chat_message("assistant"):
-    with st.spinner("XISUS está pensando..."):
-        for modelo in modelos:
-            try:
-                resultado = cliente.models.generate_content(
-                    model=modelo,
-                    contents=pregunta
-                )
+    st.chat_message("assistant").write(respuesta)
 
-                if resultado.text:
-                    respuesta = resultado.text
-                    modelo_usado = modelo
-                    break
-
-            except Exception:
-                continue
-
-        if respuesta:
-            st.write(respuesta)
-            st.caption("🧠 Modelo utilizado: " + modelo_usado)
-        else:
-            st.error("😵‍💫 XISUS no ha podido responder.")
-            st.warning(
-                "Gemini está teniendo problemas temporalmente. "
-                "Prueba de nuevo en unos segundos."
-            )
+except Exception as error:
+    st.chat_message("assistant").error(
+        "😵‍💫 XISUS no ha podido responder en este momento."
+    )
+    st.info(
+        "Gemini está teniendo problemas temporalmente. "
+        "Prueba de nuevo dentro de unos segundos."
+    )
 ```
