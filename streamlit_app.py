@@ -16,11 +16,16 @@ st.title("👩‍🦲 XISUS")
 st.caption("Tu calvito de confianza 🤖")
 
 # --- BLOQUE VISUAL: Mostrar los mensajes anteriores en la interfaz ---
+# --- BLOQUE VISUAL CORREGIDO: Mostrar los mensajes anteriores en la interfaz ---
 for mensaje in st.session_state.historial_google:
-    # Vinculamos el rol de Google 'model' al rol 'assistant' de Streamlit
-    rol_visual = "user" if mensaje["role"] == "user" else "assistant"
+    # Ahora leemos el atributo .role usando un punto (sintaxis de objeto)
+    rol_visual = "user" if mensaje.role == "user" else "assistant"
+    
     with st.chat_message(rol_visual):
-        st.write(mensaje["parts"][0])
+        # Recorremos las partes nativas del objeto Content de Google
+        for parte in mensaje.parts:
+            if parte.text:
+                st.write(parte.text)
 
 pregunta = st.chat_input("Escribe algo...")
 
