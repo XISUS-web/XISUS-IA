@@ -2,7 +2,7 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-# 1. CONFIGURACIÓN ESTÉTICA DE LA PÁGINA (Modo ancho para mejor visualización)
+# 1. CONFIGURACIÓN ESTÉTICA DE LA PÁGINA (Tema Claro Premium)
 st.set_page_config(
     page_title="XISUS IA", 
     page_icon="👩‍🦲", 
@@ -10,15 +10,36 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Estilo CSS personalizado para mejorar el diseño visual y los contenedores
+# Estilo CSS personalizado para cambiar el fondo a BLANCO y adaptar textos
 st.markdown("""
     <style>
-    .stApp { background-color: #0f1116; color: #e2e8f0; }
-    .sidebar .sidebar-content { background-color: #1a1f2c; }
-    div.stButton > button:first-child {
-        background-color: #ff4b4b; color: white; border-radius: 8px; border: none;
+    /* Fondo principal blanco y textos oscuros */
+    .stApp { 
+        background-color: #ffffff; 
+        color: #1e293b; 
     }
-    div.stButton > button:first-child:hover { background-color: #ff3333; }
+    /* Estilo para la barra lateral (Gris claro muy limpio) */
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+    }
+    /* Botón de borrar historial en color rojo estético */
+    div.stButton > button:first-child {
+        background-color: #ff4b4b; 
+        color: white; 
+        border-radius: 8px; 
+        border: none;
+    }
+    div.stButton > button:first-child:hover { 
+        background-color: #ff3333; 
+    }
+    /* Forzar que los textos secundarios se lean bien en fondo blanco */
+    p, span, label {
+        color: #334155 !important;
+    }
+    h1, h2, h3, h4 {
+        color: #0f172a !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -35,7 +56,7 @@ if "historial_google" not in st.session_state:
     st.session_state.historial_google = []
 
 # ==============================================================================
-# 4. BARRA LATERAL IZQUIERDA: CONFIGURACIONES AVANZADAS (MÁS OPCIONES Y ESTÉTIICA)
+# 4. BARRA LATERAL IZQUIERDA: CONFIGURACIONES AVANZADAS
 # ==============================================================================
 with st.sidebar:
     st.markdown("<h2 style='text-align: center;'>⚙️ Panel de Control</h2>", unsafe_allow_html=True)
@@ -55,22 +76,17 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("🎛️ Ajustes Avanzados")
     
-    # NUEVA OPCIÓN: Control de Creatividad (Temperatura)
     temperatura = st.slider(
         "Creatividad (Temperatura):", 
-        min_value=0.0, max_value=2.0, value=0.7, step=0.1,
-        help="Valores altos dan respuestas más creativas; valores bajos son más precisos."
+        min_value=0.0, max_value=2.0, value=0.7, step=0.1
     )
     
-    # NUEVA OPCIÓN: Límite de longitud de la respuesta
     max_tokens = st.slider(
         "Longitud Máxima de Respuesta (Tokens):", 
-        min_value=100, max_value=2000, value=800, step=100,
-        help="Controla el tamaño máximo del texto que generará la IA."
+        min_value=100, max_value=2000, value=800, step=100
     )
     
     st.markdown("---")
-    # Botón estético y funcional para reiniciar la conversación
     if st.button("🗑️ Limpiar Historial de Chat", use_container_width=True):
         st.session_state.historial_google = []
         st.rerun()
@@ -78,17 +94,23 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("💬 Estado de XISUS")
     st.success("🟢 API Google Conectada")
-    st.info(f"🧠 Activo: {modelo_visual}")
-    st.info(f"🎨 Estilo: {personalidad_visual}")
 
 # ==============================================================================
-# 5. PANTALLA CENTRAL: INTERFAZ DE USUARIO LIMPIA Y MODERNA
+# 5. PANTALLA CENTRAL: IMAGEN Y CHAT
 # ==============================================================================
-st.markdown("<h1 style='text-align: center; color: #ff4b4b; margin-bottom: 0;'>👩‍🦲 XISUS IA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px; color: #8892b0;'>Tu calvito de confianza en una interfaz premium</p>", unsafe_allow_html=True)
+
+# --- AQUÍ VA TU IMAGEN ---
+# Puedes usar un enlace de internet directo (URL) o la ruta de un archivo local en tu GitHub
+URL_DE_TU_IMAGEN = "https://unsplash.com" 
+
+# Desplegamos la imagen centrada y con un tamaño estético de 200 píxeles
+st.image(URL_DE_TU_IMAGEN, width=200, use_container_width=False)
+
+st.markdown("<h1 style='color: #ff4b4b; margin-top: 10px; margin-bottom: 0;'>👩‍🦲 XISUS IA</h1>", unsafe_allow_html=True)
+st.markdown("<p style='font-size: 18px; color: #64748b;'>Tu calvito de confianza en modo claro premium</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# Mapeo dinámico de personalidades según el diccionario
+# Mapeo dinámico de personalidades
 instrucciones = {
     "Normal": "Eres XISUS, tu calvito de confianza. Un asistente de IA útil.",
     "Amigable": "Eres XISUS, un asistente extremadamente amigable, entusiasta y cálido.",
@@ -105,10 +127,10 @@ for mensaje in st.session_state.historial_google:
             if parte.text:
                 st.write(parte.text)
 
-# Input del chat colocado de forma elegante abajo
+# Input del chat colocado abajo
 pregunta = st.chat_input("Escribe tu consulta aquí para hablar con tu calvito...")
 
-# 6. LÓGICA DE EJECUCIÓN CON CONFIGURACIÓN AVANZADA EXPANDIDA
+# 6. LÓGICA DE EJECUCIÓN
 if pregunta:
     with st.chat_message("user"):
         st.write(pregunta)
@@ -118,7 +140,6 @@ if pregunta:
     st.session_state.historial_google.append(mensaje_nativo)
 
     try:
-        # Añadimos los nuevos parámetros avanzados a la configuración de contenido
         configuracion = types.GenerateContentConfig(
             system_instruction=instrucciones[personalidad_visual],
             temperature=temperatura,
