@@ -1,77 +1,54 @@
 import streamlit as st
 from google import genai
 
-st.set_page_config(page_title="XISUS", page_icon="👩‍🦲")
+# 1. Tu configuración de la página con tu emoji calvo
+st.set_page_config(page_title="XISUS", page_icon="👩‍🦲", layout="centered")
 
-API_KEY = st.secrets["GEMINI_API_KEY"]
+# Tu llave API real
+LLAVE_API = "GEMINI_API_KEY"
 
-cliente = genai.Client(api_key=API_KEY)
+# Inicializamos el cliente de Google y el historial de chat en la web
+if "client" not in st.session_state:
+    st.session_state.client = genai.Client(api_key=LLAVE_API)
+    st.session_state.chat = st.session_state.client.chats.create(model="gemini-3.6-flash")
 
-# Crear la sesión de chat con memoria nativa si no existe todavía
-if "chat_gemini" not in st.session_state:
-    # Vinculamos por defecto tu modelo estrella
-    st.session_state.chat_gemini = cliente.chats.create(model="gemini-3.5-flash")
-st.title("👩‍🦲 XISUS")
-st.caption("Tu calvito de confianza 🤖")
+if "historial" not in st.session_state:
+    st.session_state.historial = []
 
-# Dibujar en pantalla el historial que tiene guardado Gemini
-historial_activo = st.session_state.chat_gemini.get_history()
-for mensaje in historial_activo:
-    # Convertimos el rol de Google ('model') al de Streamlit ('assistant')
-    rol_streamlit = "user" if mensaje.role == "user" else "assistant"
-    for parte in mensaje.parts:
-        if parte.text:
-            st.chat_message(rol_streamlit).write(parte.text)
-pregunta = st.chat_input("Escribe algo...")
-
-if pregunta:
-    # 1. Mostrar de inmediato la pregunta del usuario en pantalla
-    st.chat_message("user").write(pregunta)
-
-    try:
-        # 2. Enviar el mensaje a la sesión de chat permanente
-        resultado = st.session_state.chat_gemini.send_message(pregunta)
-
-        # 3. Mostrar la respuesta de XISUS
-        st.chat_message("assistant").write(resultado.text)
-        
-        # 4. Refrescar la página para ordenar la interfaz correctamente
+# 2. AGREGA ESTÉTICA: Barra lateral izquierda para Ernest
+with st.sidebar:
+    st.image("https://flaticon.com", width=90)
+    st.title("⚙️ Configuración")
+    st.markdown("---")
+    st.subheader("Desarrollador:")
+    st.info("Creado con orgullo por **Ernest** 🚀")
+    
+    # Botón estético para vaciar la pantalla si se llena de texto
+    if st.button("🗑️ Limpiar Historial", use_container_width=True):
+        st.session_state.historial = []
+        st.session_state.chat = st.session_state.client.chats.create(model="gemini-3.6-flash")
         st.rerun()
 
-     except Exception as e:
-        # Esto te mostrará en pantalla el motivo exacto del fallo
-        st.error("😕 XISUS ha tenido un problema al comunicarse con Gemini.")
-        st.caption(f"Detalle técnico del error: {e}")
-
+# 3. Tus títulos principales combinados con un toque estético centrado
+st.markdown("<h1 style='text-align: center; color: #FF4B4B;'>👩‍🦲 Chatea libremente con XISUS</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px;'>¡Bienvenido! Chatea con XISUS.</p>", unsafe_allow_html=True)
 st.markdown("---")
-st.subheader("⚙️ Configuración de XISUS")
 
-modelo_visual = st.selectbox(
-    "🧠 Modelo",
-    [
-        "gemini-3.5-flash",
-        "gemini-3.5-flash-lite",
-        "gemini-3.6-flash",
-        "gemini-3.7-flash"
-    ]
-)
+# Mostrar los mensajes anteriores en la pantalla visual
+for mensaje in st.session_state.historial:
+    with st.chat_message(mensaje["rol"]):
+        st.markdown(mensaje["texto"])
 
-personalidad_visual = st.selectbox(
-    "🎨 Personalidad",
-    [
-        "Normal",
-        "Amigable",
-        "Profesional",
-        "Divertido",
-        "Conciso"
-    ]
-)
+# 4. Tu cuadro de texto personalizado
+if pregunta := st.chat_input("De que quieres hablar hoy, tienes a tu calvito a disposicion"):
+    # Mostrar lo que tú escribiste
+    with st.chat_message("user"):
+        st.markdown(pregunta)
+    st.session_state.historial.append({"rol": "user", "texto": pregunta})
 
-st.markdown("---")
-st.subheader("💬 Estado de XISUS")
-
-st.success("🟢 Gemini conectado")
-
-st.info("🧠 Modelo activo: " + modelo_visual)
-
-st.info("🎨 Personalidad: " + personalidad_visual)
+    # Enviar a Google con AGREGA ESTÉTICA: Animación de "pensando..."
+    with st.chat_message("assistant"):
+        with st.spinner("XISUS está pensando..."):
+            respuesta = st.session_state.chat.send_message(pregunta)
+            st.markdown(respuesta.text)
+    st.session_state.historial.append({"rol": "assistant", "texto": respuesta.text})
