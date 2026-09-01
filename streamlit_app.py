@@ -101,7 +101,7 @@ with st.sidebar:
 
 # --- AQUÍ VA TU IMAGEN ---
 # Puedes usar un enlace de internet directo (URL) o la ruta de un archivo local en tu GitHub
-URL_DE_TU_IMAGEN = "https://i.postimg.cc/Gmx2FpG/IMG-2" 
+URL_DE_TU_IMAGEN = "https://i.postimg.cc/Gmx2FpG/IMG-2-20260818-WA0020.jpg" 
 
 # Desplegamos la imagen centrada y con un tamaño estético de 200 píxeles
 st.image(URL_DE_TU_IMAGEN, width=200, use_container_width=False)
