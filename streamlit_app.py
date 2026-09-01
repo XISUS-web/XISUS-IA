@@ -10,7 +10,7 @@ LLAVE_API = "GEMINI_API_KEY"
 # Inicializamos el cliente de Google y el historial de chat en la web
 if "client" not in st.session_state:
     st.session_state.client = genai.Client(api_key=LLAVE_API)
-    st.session_state.chat = st.session_state.client.chats.create(model="gemini-3.6-flash")
+    st.session_state.chat = st.session_state.client.chats.create(model="gemini-3.6-")
 
 if "historial" not in st.session_state:
     st.session_state.historial = []
