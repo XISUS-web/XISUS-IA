@@ -7,26 +7,40 @@ API_KEY = st.secrets["GEMINI_API_KEY"]
 
 cliente = genai.Client(api_key=API_KEY)
 
+# Crear la sesión de chat con memoria nativa si no existe todavía
+if "chat_gemini" not in st.session_state:
+    # Vinculamos por defecto tu modelo estrella
+    st.session_state.chat_gemini = cliente.chats.create(model="gemini-3.5-flash")
 st.title("👩‍🦲 XISUS")
 st.caption("Tu calvito de confianza 🤖")
 
+# Dibujar en pantalla el historial que tiene guardado Gemini
+historial_activo = st.session_state.chat_gemini.get_history()
+for mensaje in historial_activo:
+    # Convertimos el rol de Google ('model') al de Streamlit ('assistant')
+    rol_streamlit = "user" if mensaje.role == "user" else "assistant"
+    for parte in mensaje.parts:
+        if parte.text:
+            st.chat_message(rol_streamlit).write(parte.text)
 pregunta = st.chat_input("Escribe algo...")
 
 if pregunta:
+    # 1. Mostrar de inmediato la pregunta del usuario en pantalla
     st.chat_message("user").write(pregunta)
 
     try:
-        resultado = cliente.models.generate_content(
-            model="gemini-3.5-flash",
-            contents=pregunta
-        )
+        # 2. Enviar el mensaje a la sesión de chat permanente
+        resultado = st.session_state.chat_gemini.send_message(pregunta)
 
+        # 3. Mostrar la respuesta de XISUS
         st.chat_message("assistant").write(resultado.text)
+        
+        # 4. Refrescar la página para ordenar la interfaz correctamente
+        st.rerun()
 
     except Exception as e:
         st.error("😕 XISUS ha tenido un problema al comunicarse con Gemini.")
-        st.caption("Puedes intentar enviar la pregunta de nuevo.")
-
+        st.caption(f"Error: {e}")
 
 st.markdown("---")
 st.subheader("⚙️ Configuración de XISUS")
