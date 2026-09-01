@@ -112,7 +112,8 @@ st.markdown(
 st.markdown(
     "<p style='font-size: 18px; color: #64748b;'>Tu asistente de inteligencia artificial de confianza.</p>",
     unsafe_allow_html=True
-) st.write(
+)
+st.write(
     "XISUS IA es un asistente de inteligencia artificial capaz de responder "
     "preguntas, ayudarte con tareas, generar ideas y mantener conversaciones. "
     "Habla con XISUS y obtén respuestas rápidas y útiles." )
