@@ -1,9 +1,4 @@
 import streamlit as st
-st.set_page_config(
-    page_title="Xisus IA",
-    page_icon="🤖",
-    layout="centered"
-)
 from google import genai
 from google.genai import types
 
@@ -111,10 +106,17 @@ URL_DE_TU_IMAGEN = "https://flaticon.com"
 # Desplegamos la imagen centrada y con un tamaño estético de 200 píxeles
 st.image(URL_DE_TU_IMAGEN, width=200, use_container_width=False)
 
-st.markdown("<h1 style='color: #ff4b4b; margin-top: 10px; margin-bottom: 0;'>👩‍🦲 XISUS IA</h1>", unsafe_allow_html=True)
-st.markdown("<p style='font-size: 18px; color: #64748b;'>Tu calvito de confianza en modo claro premium</p>", unsafe_allow_html=True)
+st.markdown( 
+    "<h1 style='color: #ff4b4b; margin-top: 10px; margin-bottom: 0;'>👩‍🦲 XISUS IA</h1>",
+    unsafe_allow_html=True )
+st.markdown(
+    "<p style='font-size: 18px; color: #64748b;'>Tu asistente de inteligencia artificial de confianza.</p>",
+    unsafe_allow_html=True
+) st.write(
+    "XISUS IA es un asistente de inteligencia artificial capaz de responder "
+    "preguntas, ayudarte con tareas, generar ideas y mantener conversaciones. "
+    "Habla con XISUS y obtén respuestas rápidas y útiles." )
 st.markdown("---")
-
 # Mapeo dinámico de personalidades
 instrucciones = {
     "Normal": "Eres XISUS, tu calvito de confianza. Un asistente de IA útil.",
