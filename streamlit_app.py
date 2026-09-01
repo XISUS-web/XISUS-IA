@@ -28,29 +28,37 @@ if pregunta:
     # 1. Mostrar tu pregunta en la pantalla de inmediato
     st.chat_message("user").write(pregunta)
     
-    # 2. Guardar la pregunta en nuestro historial con la estructura oficial de Google
-    st.session_state.historial_google.append({"role": "user", "parts": [pregunta]})
+    # Importamos las estructuras de datos nativas que la SDK exige para validar bien
+    from google.genai import types
+
+    # 2. Convertimos tu texto en un objeto "Part" real de Google
+    parte_nativa = types.Part.from_text(text=pregunta)
+    
+    # 3. Guardamos el mensaje estructurado como un objeto Content real
+    mensaje_nativo = types.Content(role="user", parts=[parte_nativa])
+    st.session_state.historial_google.append(mensaje_nativo)
 
     try:
-        # 3. Llamada directa y segura usando generate_content pasándole todo el historial acumulado
+        # 4. Enviamos toda la lista de objetos Content acumulados. ¡Cero fallos de Pydantic!
         resultado = cliente.models.generate_content(
             model="gemini-3.5-flash",
             contents=st.session_state.historial_google
         )
 
-        # 4. Mostrar la respuesta en pantalla
+        # 5. Mostrar la respuesta en pantalla
         st.chat_message("assistant").write(resultado.text)
         
-        # 5. Guardar la respuesta de la IA en el historial para el próximo turno
-        st.session_state.historial_google.append({"role": "model", "parts": [resultado.text]})
+        # 6. Convertimos la respuesta de XISUS en objeto Content y lo guardamos
+        parte_respuesta = types.Part.from_text(text=resultado.text)
+        respuesta_nativa = types.Content(role="model", parts=[parte_respuesta])
+        st.session_state.historial_google.append(respuesta_nativa)
         
-        # Refrescar para ordenar la interfaz gráfica
+        # Refrescar la interfaz visual
         st.rerun()
 
     except Exception as e:
         st.error("😕 XISUS ha tenido un problema al comunicarse con Gemini.")
         st.caption(f"Detalle: {e}")
-
 
 st.markdown("---")
 st.subheader("⚙️ Configuración de XISUS")
