@@ -38,9 +38,10 @@ if pregunta:
         # 4. Refrescar la página para ordenar la interfaz correctamente
         st.rerun()
 
-    except Exception as e:
+     except Exception as e:
+        # Esto te mostrará en pantalla el motivo exacto del fallo
         st.error("😕 XISUS ha tenido un problema al comunicarse con Gemini.")
-        st.caption(f"Error: {e}")
+        st.caption(f"Detalle técnico del error: {e}")
 
 st.markdown("---")
 st.subheader("⚙️ Configuración de XISUS")
