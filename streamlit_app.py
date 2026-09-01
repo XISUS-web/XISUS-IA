@@ -1,4 +1,9 @@
 import streamlit as st
+st.set_page_config(
+    page_title="Xisus IA",
+    page_icon="🤖",
+    layout="centered"
+)
 from google import genai
 from google.genai import types
 
