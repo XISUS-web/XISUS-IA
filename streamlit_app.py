@@ -83,7 +83,7 @@ with st.sidebar:
     
     max_tokens = st.slider(
         "Longitud Máxima de Respuesta (Tokens):", 
-        min_value=100, max_value=2000, value=800, step=100
+        min_value=100, max_value=3000, value=1500, step=100
     )
     
     st.markdown("---")
