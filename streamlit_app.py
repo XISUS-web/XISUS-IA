@@ -62,10 +62,10 @@ with st.sidebar:
     st.markdown("<h2 style='text-align: center;'>⚙️ Panel de Control</h2>", unsafe_allow_html=True)
     st.markdown("---")
     
-    st.subheader("🤖 Parámetros del Modelo")
+    st.subheader("Parámetros del Modelo")
     modelo_visual = st.selectbox(
         "Selecciona el Cerebro:",
-        ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash"]
+        ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     )
     
     personalidad_visual = st.selectbox(
@@ -74,7 +74,7 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    st.subheader("🎛️ Ajustes Avanzados")
+    st.subheader("Ajustes Avanzados")
     
     temperatura = st.slider(
         "Creatividad (Temperatura):", 
@@ -154,10 +154,11 @@ if pregunta:
             max_output_tokens=max_tokens
         )
 
-        with st.spinner("XISUS está procesando tu respuesta..."):
+        with st.spinner("XISUS está procesando tu respuesta, suele tardar un poco"):
+            historial_limitado = st.session_state.historial_google[-16:]
             resultado = cliente.models.generate_content(
                 model=modelo_visual,
-                contents=st.session_state.historial_google,
+                contents=historial_limitado,
                 config=configuracion
             )
 
@@ -171,5 +172,5 @@ if pregunta:
         st.rerun()
 
     except Exception as e:
-        st.error("😕 Ocurrió un inconveniente técnico al contactar a la inteligencia artificial.")
+        st.error("😕 Ocurrió un inconveniente técnico al contactar a la inteligencia artificial, lea el error de debajo para saber mas acerca del error.")
         st.caption(f"Error detectado: {e}")
