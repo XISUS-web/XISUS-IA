@@ -65,7 +65,7 @@ with st.sidebar:
     st.subheader("Parámetros del Modelo")
     modelo_visual = st.selectbox(
         "Selecciona el Cerebro:",
-        ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+        ["gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.5-flash"]
     )
     
     personalidad_visual = st.selectbox(
