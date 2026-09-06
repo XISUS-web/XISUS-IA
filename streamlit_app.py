@@ -246,16 +246,15 @@ if pregunta:
 
         with st.chat_message("assistant"):
 
-           stream = cliente.responses.create(
-               model=modelo_visual,
-               instructions=instrucciones[personalidad_visual],
-               input=historial_limitado,
-               max_output_tokens=max_tokens,
-               stream=True
-           )
+            stream = cliente.responses.create(
+                model=modelo_visual,
+                instructions=instrucciones[personalidad_visual],
+                input=historial_limitado,
+                max_output_tokens=max_tokens,
+                stream=True
+            )
 
             respuesta_completa = ""
-
             placeholder = st.empty()
 
             for evento in stream:
@@ -263,7 +262,6 @@ if pregunta:
                 if evento.type == "response.output_text.delta":
 
                     respuesta_completa += evento.delta
-
                     placeholder.markdown(respuesta_completa)
 
         # ======================================================================
