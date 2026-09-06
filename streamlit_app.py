@@ -1,5 +1,5 @@
 import streamlit as st
-from google import genai
+from google import OpenAI
 from google.genai import types
 
 # 1. CONFIGURACIÓN ESTÉTICA DE LA PÁGINA (Tema Claro Premium)
