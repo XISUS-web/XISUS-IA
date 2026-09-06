@@ -45,10 +45,10 @@ st.markdown("""
 
 # 2. INICIALIZACIÓN SEGURA DE LA API
 try:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
+    API_KEY = st.secrets["OPENAI_API_KEY"]
     cliente = genai.Client(api_key=API_KEY)
 except Exception as e:
-    st.error("🔑 Error: Configura 'GEMINI_API_KEY' en los Secrets de Streamlit.")
+    st.error("🔑 Error: Configura 'OPENAI_API_KEY' en los Secrets de Streamlit.")
     st.stop()
 
 # 3. MEMORIA INTERNA DEL CHAT
