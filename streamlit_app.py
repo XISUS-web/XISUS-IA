@@ -181,7 +181,7 @@ with st.sidebar:
     modo_imagen = st.radio(
         "¿Quieres añadir una imagen?",
         [
-            "Ninguna",
+            "No, callate:(",
             "📁 Subir imagen",
             "📸 Usar cámara"
         ],
