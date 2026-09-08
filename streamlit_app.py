@@ -4,6 +4,7 @@ from groq import Groq
 from openai import OpenAI
 import base64
 import hashlib
+import re
 
 # ==============================================================================
 # 1. CONFIGURACIÓN
@@ -55,11 +56,12 @@ h1, h2, h3, h4 {
 groq_disponible = False
 openai_disponible = False
 
-# -----------------------------
+# ------------------------------------------------------------------------------
 # GROQ — MOTOR PRINCIPAL
-# -----------------------------
+# ------------------------------------------------------------------------------
 
 try:
+
     GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
     cliente_groq = Groq(
@@ -69,14 +71,16 @@ try:
     groq_disponible = True
 
 except Exception:
+
     cliente_groq = None
 
 
-# -----------------------------
+# ------------------------------------------------------------------------------
 # OPENAI — MOTOR SECUNDARIO
-# -----------------------------
+# ------------------------------------------------------------------------------
 
 try:
+
     OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
     cliente_openai = OpenAI(
@@ -86,10 +90,13 @@ try:
     openai_disponible = True
 
 except Exception:
+
     cliente_openai = None
 
 
-# Si ninguno está disponible, detener la aplicación
+# ------------------------------------------------------------------------------
+# COMPROBAR MOTORES
+# ------------------------------------------------------------------------------
 
 if not groq_disponible and not openai_disponible:
 
@@ -98,7 +105,8 @@ if not groq_disponible and not openai_disponible:
     )
 
     st.info(
-        "Configura GROQ_API_KEY y/o OPENAI_API_KEY en los secrets de Streamlit."
+        "Configura GROQ_API_KEY y/o OPENAI_API_KEY "
+        "en los secrets de Streamlit."
     )
 
     st.stop()
@@ -119,6 +127,15 @@ if "audio_procesado" not in st.session_state:
 
 if "ultimo_motor" not in st.session_state:
     st.session_state.ultimo_motor = None
+
+if "audio_respuesta" not in st.session_state:
+    st.session_state.audio_respuesta = []
+
+if "texto_audio_generado" not in st.session_state:
+    st.session_state.texto_audio_generado = None
+
+if "voz_generada_hash" not in st.session_state:
+    st.session_state.voz_generada_hash = None
 
 
 # ==============================================================================
@@ -168,7 +185,167 @@ instrucciones = {
 
 
 # ==============================================================================
-# 6. BARRA LATERAL
+# 6. FUNCIONES DE VOZ
+# ==============================================================================
+
+def limpiar_texto_para_voz(texto):
+
+    texto = re.sub(
+        r"```.*?```",
+        "",
+        texto,
+        flags=re.DOTALL
+    )
+
+    texto = re.sub(
+        r"`([^`]*)`",
+        r"\1",
+        texto
+    )
+
+    texto = re.sub(
+        r"\[([^\]]+)\]\([^)]+\)",
+        r"\1",
+        texto
+    )
+
+    texto = re.sub(
+        r"[*_#>]",
+        "",
+        texto
+    )
+
+    texto = re.sub(
+        r"\s+",
+        " ",
+        texto
+    )
+
+    return texto.strip()
+
+
+def dividir_texto_voz(
+    texto,
+    max_caracteres=3900
+):
+
+    texto = limpiar_texto_para_voz(
+        texto
+    )
+
+    if len(texto) <= max_caracteres:
+
+        return [texto]
+
+    frases = re.split(
+        r"(?<=[.!?])\s+",
+        texto
+    )
+
+    fragmentos = []
+    actual = ""
+
+    for frase in frases:
+
+        if not frase.strip():
+            continue
+
+        candidato = (
+            actual + " " + frase
+        ).strip()
+
+        if len(candidato) <= max_caracteres:
+
+            actual = candidato
+
+        else:
+
+            if actual:
+
+                fragmentos.append(
+                    actual
+                )
+
+            while len(frase) > max_caracteres:
+
+                corte = frase.rfind(
+                    " ",
+                    0,
+                    max_caracteres
+                )
+
+                if corte <= 0:
+                    corte = max_caracteres
+
+                fragmentos.append(
+                    frase[:corte].strip()
+                )
+
+                frase = frase[corte:].strip()
+
+            actual = frase
+
+    if actual:
+
+        fragmentos.append(
+            actual
+        )
+
+    return fragmentos
+
+
+def generar_voz_openai(
+    texto,
+    voz,
+    velocidad
+):
+
+    if not openai_disponible:
+
+        return []
+
+    fragmentos = dividir_texto_voz(
+        texto
+    )
+
+    audios = []
+
+    for fragmento in fragmentos:
+
+        if not fragmento:
+            continue
+
+        respuesta_audio = (
+            cliente_openai.audio.speech.create(
+
+                model="gpt-4o-mini-tts",
+
+                voice=voz,
+
+                input=fragmento,
+
+                instructions=(
+                    "Habla en español de España. "
+                    "Utiliza una voz natural, cercana "
+                    "y clara. "
+                    "No leas símbolos de Markdown."
+                ),
+
+                response_format="mp3",
+
+                speed=velocidad
+            )
+        )
+
+        audios.append(
+            respuesta_audio.content
+        )
+
+    return audios
+
+
+# ==============================================================================
+# 7. BARRA LATERAL
 # ==============================================================================
 
 with st.sidebar:
@@ -186,9 +363,17 @@ with st.sidebar:
 
     st.subheader("⚡ Motores de IA")
 
-    st.success(
-        "🟢 Groq — MOTOR PRINCIPAL"
-    )
+    if groq_disponible:
+
+        st.success(
+            "🟢 Groq — MOTOR PRINCIPAL"
+        )
+
+    else:
+
+        st.error(
+            "🔴 Groq — No disponible"
+        )
 
     if openai_disponible:
 
@@ -206,7 +391,6 @@ with st.sidebar:
         "XISUS utiliza Groq primero. "
         "OpenAI entra automáticamente si Groq falla."
     )
-
 
     # ==========================================================================
     # MODELO GROQ
@@ -226,7 +410,6 @@ with st.sidebar:
         index=0
     )
 
-
     # ==========================================================================
     # MODELO OPENAI
     # ==========================================================================
@@ -242,7 +425,6 @@ with st.sidebar:
         ],
         index=0
     )
-
 
     # ==========================================================================
     # PERSONALIDAD
@@ -263,7 +445,6 @@ with st.sidebar:
         ],
         index=0
     )
-
 
     # ==========================================================================
     # AJUSTES
@@ -289,6 +470,66 @@ with st.sidebar:
         step=0.1
     )
 
+    # ==========================================================================
+    # VOZ DE XISUS
+    # ==========================================================================
+
+    st.markdown("---")
+
+    st.subheader("🔊 Voz de XISUS")
+
+    voz_activada = st.toggle(
+        "🔊 Responder con voz",
+        value=True
+    )
+
+    voz_xisus = st.selectbox(
+        "Voz:",
+        [
+            "coral",
+            "alloy",
+            "ash",
+            "ballad",
+            "echo",
+            "fable",
+            "nova",
+            "onyx",
+            "sage",
+            "shimmer",
+            "verse",
+            "marin",
+            "cedar"
+        ],
+        index=0
+    )
+
+    velocidad_voz = st.slider(
+        "Velocidad:",
+        min_value=0.75,
+        max_value=1.5,
+        value=1.0,
+        step=0.05
+    )
+
+    if voz_activada:
+
+        if openai_disponible:
+
+            st.success(
+                "🟢 Voz activada"
+            )
+
+        else:
+
+            st.warning(
+                "⚠️ La voz necesita OPENAI_API_KEY."
+            )
+
+    else:
+
+        st.caption(
+            "XISUS responderá solamente por texto."
+        )
 
     # ==========================================================================
     # IMÁGENES
@@ -310,7 +551,6 @@ with st.sidebar:
 
     imagen_nueva = None
 
-
     if modo_imagen == "📁 Subir imagen":
 
         imagen_nueva = st.file_uploader(
@@ -324,7 +564,6 @@ with st.sidebar:
             key="uploader_imagen"
         )
 
-
     elif modo_imagen == "📸 Hacer foto":
 
         imagen_nueva = st.camera_input(
@@ -332,15 +571,17 @@ with st.sidebar:
             key="camara_imagen"
         )
 
-
     if imagen_nueva is not None:
 
-        contenido_imagen = imagen_nueva.getvalue()
+        contenido_imagen = (
+            imagen_nueva.getvalue()
+        )
 
         if contenido_imagen:
 
-            st.session_state.imagen_actual = contenido_imagen
-
+            st.session_state.imagen_actual = (
+                contenido_imagen
+            )
 
     if st.session_state.imagen_actual is not None:
 
@@ -362,14 +603,13 @@ with st.sidebar:
 
             st.rerun()
 
-
     # ==========================================================================
-    # VOZ
+    # ENTRADA DE VOZ
     # ==========================================================================
 
     st.markdown("---")
 
-    st.subheader("🎙️ Voz")
+    st.subheader("🎙️ Entrada de voz")
 
     st.caption(
         "Graba un mensaje y XISUS lo convertirá en texto."
@@ -380,7 +620,6 @@ with st.sidebar:
         sample_rate=16000,
         key="audio_usuario"
     )
-
 
     # ==========================================================================
     # LIMPIAR CHAT
@@ -401,8 +640,13 @@ with st.sidebar:
 
         st.session_state.ultimo_motor = None
 
-        st.rerun()
+        st.session_state.audio_respuesta = []
 
+        st.session_state.texto_audio_generado = None
+
+        st.session_state.voz_generada_hash = None
+
+        st.rerun()
 
     # ==========================================================================
     # ESTADO
@@ -438,7 +682,7 @@ with st.sidebar:
 
 
 # ==============================================================================
-# 7. CABECERA
+# 8. CABECERA
 # ==============================================================================
 
 URL_DE_TU_IMAGEN = (
@@ -484,14 +728,15 @@ st.markdown(
 
 st.write(
     "XISUS IA puede responder preguntas, mantener conversaciones, "
-    "analizar imágenes y recibir mensajes mediante voz."
+    "analizar imágenes, recibir mensajes mediante voz "
+    "y responder hablando."
 )
 
 st.markdown("---")
 
 
 # ==============================================================================
-# 8. IMAGEN PREPARADA
+# 9. IMAGEN PREPARADA
 # ==============================================================================
 
 imagen = st.session_state.imagen_actual
@@ -514,7 +759,7 @@ if imagen is not None:
 
 
 # ==============================================================================
-# 9. HISTORIAL
+# 10. HISTORIAL
 # ==============================================================================
 
 for mensaje in st.session_state.historial:
@@ -529,7 +774,40 @@ for mensaje in st.session_state.historial:
 
 
 # ==============================================================================
-# 10. VOZ → TEXTO
+# 11. MOSTRAR ÚLTIMA RESPUESTA DE VOZ
+# ==============================================================================
+
+if (
+    voz_activada
+    and st.session_state.audio_respuesta
+):
+
+    st.markdown(
+        "### 🔊 XISUS está hablando"
+    )
+
+    for numero, audio in enumerate(
+        st.session_state.audio_respuesta,
+        start=1
+    ):
+
+        if len(
+            st.session_state.audio_respuesta
+        ) > 1:
+
+            st.caption(
+                f"Parte {numero}"
+            )
+
+        st.audio(
+            audio,
+            format="audio/mp3",
+            autoplay=True
+        )
+
+
+# ==============================================================================
+# 12. VOZ → TEXTO
 # ==============================================================================
 
 pregunta_voz = None
@@ -547,8 +825,6 @@ if audio_usuario is not None:
         != audio_hash
     ):
 
-        # La transcripción utiliza Groq como principal.
-
         if groq_disponible:
 
             try:
@@ -559,28 +835,34 @@ if audio_usuario is not None:
 
                     transcripcion = (
                         cliente_groq.audio.transcriptions.create(
+
                             file=(
                                 "mensaje.wav",
                                 audio_bytes,
                                 "audio/wav"
                             ),
+
                             model="whisper-large-v3-turbo",
+
                             language="es",
+
                             temperature=0
                         )
                     )
 
-                pregunta_voz = transcripcion.text.strip()
+                pregunta_voz = (
+                    transcripcion.text.strip()
+                )
 
-                st.session_state.audio_procesado = audio_hash
+                st.session_state.audio_procesado = (
+                    audio_hash
+                )
 
             except Exception as e:
 
                 st.warning(
                     "⚠️ Groq no pudo procesar la voz."
                 )
-
-                # Intentar OpenAI como respaldo
 
                 if openai_disponible:
 
@@ -590,21 +872,25 @@ if audio_usuario is not None:
                             "🔵 Intentando transcripción con OpenAI..."
                         ):
 
-                            archivo_audio = (
-                                "mensaje.wav",
-                                audio_bytes
-                            )
-
                             transcripcion = (
                                 cliente_openai.audio.transcriptions.create(
+
                                     model="whisper-1",
-                                    file=archivo_audio
+
+                                    file=(
+                                        "mensaje.wav",
+                                        audio_bytes
+                                    )
                                 )
                             )
 
-                        pregunta_voz = transcripcion.text.strip()
+                        pregunta_voz = (
+                            transcripcion.text.strip()
+                        )
 
-                        st.session_state.audio_procesado = audio_hash
+                        st.session_state.audio_procesado = (
+                            audio_hash
+                        )
 
                     except Exception as e2:
 
@@ -630,7 +916,9 @@ if audio_usuario is not None:
 
                     transcripcion = (
                         cliente_openai.audio.transcriptions.create(
+
                             model="whisper-1",
+
                             file=(
                                 "mensaje.wav",
                                 audio_bytes
@@ -638,9 +926,13 @@ if audio_usuario is not None:
                         )
                     )
 
-                pregunta_voz = transcripcion.text.strip()
+                pregunta_voz = (
+                    transcripcion.text.strip()
+                )
 
-                st.session_state.audio_procesado = audio_hash
+                st.session_state.audio_procesado = (
+                    audio_hash
+                )
 
             except Exception as e:
 
@@ -652,7 +944,6 @@ if audio_usuario is not None:
                     f"Error: {e}"
                 )
 
-
         if pregunta_voz:
 
             st.info(
@@ -661,7 +952,7 @@ if audio_usuario is not None:
 
 
 # ==============================================================================
-# 11. CHAT DE TEXTO
+# 13. CHAT DE TEXTO
 # ==============================================================================
 
 pregunta_texto = st.chat_input(
@@ -670,7 +961,7 @@ pregunta_texto = st.chat_input(
 
 
 # ==============================================================================
-# 12. ELEGIR PREGUNTA
+# 14. ELEGIR PREGUNTA
 # ==============================================================================
 
 if pregunta_voz:
@@ -683,25 +974,33 @@ else:
 
 
 # ==============================================================================
-# 13. FUNCIÓN PARA CONSTRUIR IMAGEN
+# 15. CONSTRUIR IMAGEN
 # ==============================================================================
 
-def crear_contenido_con_imagen(pregunta, imagen):
+def crear_contenido_con_imagen(
+    pregunta,
+    imagen
+):
 
     imagen_base64 = base64.b64encode(
         imagen
     ).decode("utf-8")
 
-
-    if imagen.startswith(b"\x89PNG"):
+    if imagen.startswith(
+        b"\x89PNG"
+    ):
 
         tipo_imagen = "image/png"
 
-    elif imagen.startswith(b"RIFF"):
+    elif imagen.startswith(
+        b"RIFF"
+    ):
 
         tipo_imagen = "image/webp"
 
-    elif imagen.startswith(b"\xff\xd8"):
+    elif imagen.startswith(
+        b"\xff\xd8"
+    ):
 
         tipo_imagen = "image/jpeg"
 
@@ -709,12 +1008,10 @@ def crear_contenido_con_imagen(pregunta, imagen):
 
         tipo_imagen = "image/jpeg"
 
-
     imagen_data_url = (
         f"data:{tipo_imagen};base64,"
         f"{imagen_base64}"
     )
-
 
     return [
 
@@ -734,10 +1031,21 @@ def crear_contenido_con_imagen(pregunta, imagen):
 
 
 # ==============================================================================
-# 14. PROCESAMIENTO PRINCIPAL
+# 16. PROCESAMIENTO PRINCIPAL
 # ==============================================================================
 
 if pregunta:
+
+    # --------------------------------------------------------------------------
+    # LIMPIAR AUDIO ANTERIOR
+    # --------------------------------------------------------------------------
+
+    st.session_state.audio_respuesta = []
+
+    st.session_state.texto_audio_generado = None
+
+    st.session_state.voz_generada_hash = None
+
 
     # --------------------------------------------------------------------------
     # MOSTRAR MENSAJE DEL USUARIO
@@ -758,7 +1066,7 @@ if pregunta:
 
 
     # --------------------------------------------------------------------------
-    # CONSTRUIR HISTORIAL PARA LA IA
+    # CONSTRUIR HISTORIAL
     # --------------------------------------------------------------------------
 
     mensajes = [
@@ -771,7 +1079,6 @@ if pregunta:
         }
 
     ]
-
 
     for mensaje in st.session_state.historial[-16:]:
 
@@ -789,9 +1096,11 @@ if pregunta:
 
     if imagen is not None:
 
-        contenido_usuario = crear_contenido_con_imagen(
-            pregunta,
-            imagen
+        contenido_usuario = (
+            crear_contenido_con_imagen(
+                pregunta,
+                imagen
+            )
         )
 
     else:
@@ -808,7 +1117,7 @@ if pregunta:
 
 
     # ==========================================================================
-    # 15. GROQ — MOTOR PRINCIPAL
+    # 17. GROQ — MOTOR PRINCIPAL
     # ==========================================================================
 
     respuesta_completa = ""
@@ -816,7 +1125,6 @@ if pregunta:
     respuesta_generada = False
 
     error_groq = None
-
 
     if groq_disponible:
 
@@ -830,57 +1138,59 @@ if pregunta:
                     "🟢 XISUS está pensando con Groq..."
                 )
 
-
-                # Si hay imagen usamos el modelo multimodal.
-                # Si no hay imagen utilizamos el modelo elegido.
-
                 if imagen is not None:
 
-                    modelo_final_groq = "qwen/qwen3.6-27b"
+                    modelo_final_groq = (
+                        "qwen/qwen3.6-27b"
+                    )
 
                 else:
 
-                    modelo_final_groq = modelo_groq
+                    modelo_final_groq = (
+                        modelo_groq
+                    )
 
+                stream = (
+                    cliente_groq.chat.completions.create(
 
-                stream = cliente_groq.chat.completions.create(
+                        model=modelo_final_groq,
 
-                    model=modelo_final_groq,
+                        messages=mensajes,
 
-                    messages=mensajes,
+                        temperature=temperatura,
 
-                    temperature=temperatura,
+                        max_completion_tokens=max_tokens,
 
-                    max_completion_tokens=max_tokens,
-
-                    stream=True
-
+                        stream=True
+                    )
                 )
-
 
                 for chunk in stream:
 
                     if not chunk.choices:
-
                         continue
 
-                    delta = chunk.choices[0].delta
+                    delta = (
+                        chunk.choices[0].delta
+                    )
 
                     if delta.content:
 
-                        respuesta_completa += delta.content
+                        respuesta_completa += (
+                            delta.content
+                        )
 
                         placeholder.markdown(
                             respuesta_completa
                         )
 
-
                 if respuesta_completa.strip():
 
                     respuesta_generada = True
 
-                    st.session_state.ultimo_motor = "Groq"
-
+                    st.session_state.ultimo_motor = (
+                        "Groq"
+                    )
 
         except Exception as e:
 
@@ -890,7 +1200,7 @@ if pregunta:
 
 
     # ==========================================================================
-    # 16. OPENAI — MOTOR SECUNDARIO
+    # 18. OPENAI — MOTOR SECUNDARIO
     # ==========================================================================
 
     if not respuesta_generada:
@@ -904,11 +1214,9 @@ if pregunta:
                     placeholder = st.empty()
 
                     placeholder.caption(
-                        "🔵 Groq no respondió. XISUS está usando OpenAI..."
+                        "🔵 Groq no respondió. "
+                        "XISUS está usando OpenAI..."
                     )
-
-
-                    # OpenAI recibe el mismo historial.
 
                     stream_openai = (
                         cliente_openai.chat.completions.create(
@@ -922,27 +1230,27 @@ if pregunta:
                             max_completion_tokens=max_tokens,
 
                             stream=True
-
                         )
                     )
-
 
                     for chunk in stream_openai:
 
                         if not chunk.choices:
-
                             continue
 
-                        delta = chunk.choices[0].delta
+                        delta = (
+                            chunk.choices[0].delta
+                        )
 
                         if delta.content:
 
-                            respuesta_completa += delta.content
+                            respuesta_completa += (
+                                delta.content
+                            )
 
                             placeholder.markdown(
                                 respuesta_completa
                             )
-
 
                     if respuesta_completa.strip():
 
@@ -952,49 +1260,31 @@ if pregunta:
                             "OpenAI (respaldo)"
                         )
 
-
             except Exception as e:
 
-                if error_groq:
+                st.error(
+                    "❌ No se ha podido generar la respuesta."
+                )
 
-                    st.error(
-                        "❌ Groq y OpenAI han fallado."
-                    )
+                if error_groq:
 
                     st.caption(
                         f"Error Groq: {error_groq}"
                     )
 
-                    st.caption(
-                        f"Error OpenAI: {e}"
-                    )
-
-                else:
-
-                    st.error(
-                        "❌ OpenAI no ha podido generar la respuesta."
-                    )
-
-                    st.caption(
-                        f"Error: {e}"
-                    )
-
+                st.caption(
+                    f"Error OpenAI: {e}"
+                )
 
         else:
 
-            if error_groq:
-
-                st.error(
-                    "❌ Groq ha fallado y OpenAI no está configurado."
-                )
-
-                st.caption(
-                    f"Error Groq: {error_groq}"
-                )
+            st.error(
+                "❌ Groq ha fallado y OpenAI no está configurado."
+            )
 
 
     # ==========================================================================
-    # 17. GUARDAR CONVERSACIÓN
+    # 19. GUARDAR CONVERSACIÓN
     # ==========================================================================
 
     if respuesta_generada:
@@ -1006,7 +1296,6 @@ if pregunta:
             }
         )
 
-
         st.session_state.historial.append(
             {
                 "role": "assistant",
@@ -1015,9 +1304,71 @@ if pregunta:
         )
 
 
-        # ----------------------------------------------------------------------
-        # MOSTRAR MOTOR UTILIZADO
-        # ----------------------------------------------------------------------
+        # ======================================================================
+        # 20. GENERAR VOZ
+        # ======================================================================
+
+        if voz_activada:
+
+            if openai_disponible:
+
+                try:
+
+                    with st.spinner(
+                        "🔊 XISUS está preparando su voz..."
+                    ):
+
+                        audios_generados = (
+                            generar_voz_openai(
+
+                                respuesta_completa,
+
+                                voz=voz_xisus,
+
+                                velocidad=velocidad_voz
+                            )
+                        )
+
+                    if audios_generados:
+
+                        st.session_state.audio_respuesta = (
+                            audios_generados
+                        )
+
+                        st.session_state.texto_audio_generado = (
+                            respuesta_completa
+                        )
+
+                        st.session_state.voz_generada_hash = (
+                            hashlib.md5(
+                                respuesta_completa.encode(
+                                    "utf-8"
+                                )
+                            ).hexdigest()
+                        )
+
+                except Exception as e:
+
+                    st.warning(
+                        "⚠️ XISUS ha respondido por texto, "
+                        "pero no ha podido generar la voz."
+                    )
+
+                    st.caption(
+                        f"Error TTS: {e}"
+                    )
+
+            else:
+
+                st.warning(
+                    "🔵 Para utilizar la voz necesitas "
+                    "configurar OPENAI_API_KEY."
+                )
+
+
+        # ======================================================================
+        # 21. MOTOR UTILIZADO
+        # ======================================================================
 
         if st.session_state.ultimo_motor == "Groq":
 
@@ -1035,17 +1386,17 @@ if pregunta:
             )
 
 
-        # ----------------------------------------------------------------------
-        # LIMPIAR IMAGEN
-        # ----------------------------------------------------------------------
+        # ======================================================================
+        # 22. LIMPIAR IMAGEN
+        # ======================================================================
 
         if imagen is not None:
 
             st.session_state.imagen_actual = None
 
 
-        # ----------------------------------------------------------------------
-        # RECARGAR
-        # ----------------------------------------------------------------------
+        # ======================================================================
+        # 23. RECARGAR
+        # ======================================================================
 
         st.rerun()
