@@ -301,12 +301,9 @@ def generar_voz_openai(
 ):
 
     if not openai_disponible:
-
         return []
 
-    fragmentos = dividir_texto_voz(
-        texto
-    )
+    fragmentos = dividir_texto_voz(texto)
 
     audios = []
 
@@ -315,31 +312,43 @@ def generar_voz_openai(
         if not fragmento:
             continue
 
-        respuesta_audio = (
-            cliente_openai.audio.speech.create(
+        try:
 
+            respuesta_audio = cliente_openai.audio.speech.create(
                 model="gpt-4o-mini-tts",
-
                 voice=voz,
-
                 input=fragmento,
-
                 instructions=(
                     "Habla en español de España. "
-                    "Utiliza una voz natural, cercana "
-                    "y clara. "
+                    "Utiliza una voz natural, cercana y clara. "
                     "No leas símbolos de Markdown."
                 ),
-
                 response_format="mp3",
-
                 speed=velocidad
             )
-        )
 
-        audios.append(
-            respuesta_audio.content
-        )
+            audio_bytes = respuesta_audio.content
+
+            # Comprobar que realmente recibimos audio
+            if not audio_bytes:
+                raise Exception(
+                    "OpenAI no devolvió ningún dato de audio."
+                )
+
+            # Comprobar tamaño
+            if len(audio_bytes) < 1000:
+                raise Exception(
+                    f"El audio recibido es demasiado pequeño: "
+                    f"{len(audio_bytes)} bytes."
+                )
+
+            audios.append(audio_bytes)
+
+        except Exception as e:
+
+            raise Exception(
+                f"Error generando voz con OpenAI: {e}"
+            )
 
     return audios
 
