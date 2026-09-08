@@ -807,14 +807,10 @@ if (
                 f"Parte {numero}"
             )
 
-        # IMPORTANTE:
-        # Aquí hay que reproducir "audio", no la lista completa.
-
         st.audio(
             audio,
             format="audio/mp3"
         )
-
 # =============================================================================
 # 12. VOZ → TEXTO
 # ==============================================================================
