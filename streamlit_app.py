@@ -1,6 +1,7 @@
 
 import streamlit as st
 from groq import Groq
+from openai import OpenAI
 import base64
 import hashlib
 
@@ -44,31 +45,61 @@ h1, h2, h3, h4 {
     color: #0f172a !important;
 }
 
-[data-testid="stChatMessage"] {
-    border-radius: 12px;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
+# ==============================================================================
+# 3. CONEXIÓN CON GROQ Y OPENAI
+# ==============================================================================
 
-# ==============================================================================
-# 3. CONEXIÓN CON GROQ
-# ==============================================================================
+groq_disponible = False
+openai_disponible = False
+
+# -----------------------------
+# GROQ — MOTOR PRINCIPAL
+# -----------------------------
 
 try:
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-    API_KEY = st.secrets["GROQ_API_KEY"]
-
-    cliente = Groq(
-        api_key=API_KEY
+    cliente_groq = Groq(
+        api_key=GROQ_API_KEY
     )
 
-except Exception as e:
+    groq_disponible = True
 
-    st.error("🔑 No se ha podido conectar con Groq.")
+except Exception:
+    cliente_groq = None
 
-    st.caption(f"Error: {e}")
+
+# -----------------------------
+# OPENAI — MOTOR SECUNDARIO
+# -----------------------------
+
+try:
+    OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+
+    cliente_openai = OpenAI(
+        api_key=OPENAI_API_KEY
+    )
+
+    openai_disponible = True
+
+except Exception:
+    cliente_openai = None
+
+
+# Si ninguno está disponible, detener la aplicación
+
+if not groq_disponible and not openai_disponible:
+
+    st.error(
+        "🔑 No hay ningún motor de IA disponible."
+    )
+
+    st.info(
+        "Configura GROQ_API_KEY y/o OPENAI_API_KEY en los secrets de Streamlit."
+    )
 
     st.stop()
 
@@ -85,6 +116,9 @@ if "imagen_actual" not in st.session_state:
 
 if "audio_procesado" not in st.session_state:
     st.session_state.audio_procesado = None
+
+if "ultimo_motor" not in st.session_state:
+    st.session_state.ultimo_motor = None
 
 
 # ==============================================================================
@@ -147,13 +181,43 @@ with st.sidebar:
     st.markdown("---")
 
     # ==========================================================================
-    # MODELO
+    # MOTORES
     # ==========================================================================
 
-    st.subheader("🧠 Modelo")
+    st.subheader("⚡ Motores de IA")
 
-    modelo_visual = st.selectbox(
-        "Selecciona el cerebro:",
+    st.success(
+        "🟢 Groq — MOTOR PRINCIPAL"
+    )
+
+    if openai_disponible:
+
+        st.info(
+            "🔵 OpenAI — MOTOR SECUNDARIO"
+        )
+
+    else:
+
+        st.warning(
+            "🔵 OpenAI — No configurado"
+        )
+
+    st.caption(
+        "XISUS utiliza Groq primero. "
+        "OpenAI entra automáticamente si Groq falla."
+    )
+
+
+    # ==========================================================================
+    # MODELO GROQ
+    # ==========================================================================
+
+    st.markdown("---")
+
+    st.subheader("🧠 Modelo Groq")
+
+    modelo_groq = st.selectbox(
+        "Selecciona el modelo principal:",
         [
             "openai/gpt-oss-120b",
             "openai/gpt-oss-20b",
@@ -162,14 +226,31 @@ with st.sidebar:
         index=0
     )
 
-    st.caption(
-        "Qwen 3.6 permite analizar imágenes."
+
+    # ==========================================================================
+    # MODELO OPENAI
+    # ==========================================================================
+
+    st.subheader("🔵 Modelo OpenAI")
+
+    modelo_openai = st.selectbox(
+        "Modelo secundario:",
+        [
+            "gpt-5-mini",
+            "gpt-5",
+            "gpt-5-nano"
+        ],
+        index=0
     )
 
 
     # ==========================================================================
     # PERSONALIDAD
     # ==========================================================================
+
+    st.markdown("---")
+
+    st.subheader("🎭 Personalidad")
 
     personalidad_visual = st.selectbox(
         "Personalidad:",
@@ -230,10 +311,6 @@ with st.sidebar:
     imagen_nueva = None
 
 
-    # --------------------------------------------------------------------------
-    # SUBIR IMAGEN
-    # --------------------------------------------------------------------------
-
     if modo_imagen == "📁 Subir imagen":
 
         imagen_nueva = st.file_uploader(
@@ -248,10 +325,6 @@ with st.sidebar:
         )
 
 
-    # --------------------------------------------------------------------------
-    # CÁMARA
-    # --------------------------------------------------------------------------
-
     elif modo_imagen == "📸 Hacer foto":
 
         imagen_nueva = st.camera_input(
@@ -260,26 +333,20 @@ with st.sidebar:
         )
 
 
-    # --------------------------------------------------------------------------
-    # GUARDAR IMAGEN
-    # --------------------------------------------------------------------------
-
     if imagen_nueva is not None:
 
-        nuevo_contenido = imagen_nueva.getvalue()
+        contenido_imagen = imagen_nueva.getvalue()
 
-        if nuevo_contenido:
+        if contenido_imagen:
 
-            st.session_state.imagen_actual = nuevo_contenido
+            st.session_state.imagen_actual = contenido_imagen
 
-
-    # --------------------------------------------------------------------------
-    # MOSTRAR IMAGEN PREPARADA
-    # --------------------------------------------------------------------------
 
     if st.session_state.imagen_actual is not None:
 
-        st.success("🟢 Imagen preparada")
+        st.success(
+            "🟢 Imagen preparada"
+        )
 
         st.image(
             st.session_state.imagen_actual,
@@ -332,6 +399,8 @@ with st.sidebar:
 
         st.session_state.audio_procesado = None
 
+        st.session_state.ultimo_motor = None
+
         st.rerun()
 
 
@@ -343,13 +412,33 @@ with st.sidebar:
 
     st.subheader("💬 Estado")
 
-    st.success(
-        "🟢 Groq conectada"
-    )
+    if groq_disponible:
+
+        st.success(
+            "🟢 Groq disponible"
+        )
+
+    else:
+
+        st.error(
+            "🔴 Groq no disponible"
+        )
+
+    if openai_disponible:
+
+        st.info(
+            "🔵 OpenAI disponible"
+        )
+
+    else:
+
+        st.warning(
+            "🟠 OpenAI no disponible"
+        )
 
 
 # ==============================================================================
-# 7. CABECERA PRINCIPAL
+# 7. CABECERA
 # ==============================================================================
 
 URL_DE_TU_IMAGEN = (
@@ -402,7 +491,7 @@ st.markdown("---")
 
 
 # ==============================================================================
-# 8. MOSTRAR IMAGEN PREPARADA
+# 8. IMAGEN PREPARADA
 # ==============================================================================
 
 imagen = st.session_state.imagen_actual
@@ -425,7 +514,7 @@ if imagen is not None:
 
 
 # ==============================================================================
-# 9. MOSTRAR HISTORIAL
+# 9. HISTORIAL
 # ==============================================================================
 
 for mensaje in st.session_state.historial:
@@ -440,7 +529,7 @@ for mensaje in st.session_state.historial:
 
 
 # ==============================================================================
-# 10. TRANSCRIPCIÓN DE VOZ
+# 10. VOZ → TEXTO
 # ==============================================================================
 
 pregunta_voz = None
@@ -453,51 +542,121 @@ if audio_usuario is not None:
         audio_bytes
     ).hexdigest()
 
-
-    # Evitar procesar el mismo audio varias veces
-
     if (
         st.session_state.audio_procesado
         != audio_hash
     ):
 
-        try:
+        # La transcripción utiliza Groq como principal.
 
-            with st.spinner(
-                "🎙️ XISUS está escuchando..."
-            ):
+        if groq_disponible:
 
-                transcripcion = (
-                    cliente.audio.transcriptions.create(
-                        file=(
-                            "mensaje.wav",
-                            audio_bytes,
-                            "audio/wav"
-                        ),
-                        model="whisper-large-v3-turbo",
-                        language="es",
-                        temperature=0
+            try:
+
+                with st.spinner(
+                    "🎙️ XISUS está escuchando con Groq..."
+                ):
+
+                    transcripcion = (
+                        cliente_groq.audio.transcriptions.create(
+                            file=(
+                                "mensaje.wav",
+                                audio_bytes,
+                                "audio/wav"
+                            ),
+                            model="whisper-large-v3-turbo",
+                            language="es",
+                            temperature=0
+                        )
                     )
+
+                pregunta_voz = transcripcion.text.strip()
+
+                st.session_state.audio_procesado = audio_hash
+
+            except Exception as e:
+
+                st.warning(
+                    "⚠️ Groq no pudo procesar la voz."
                 )
 
-            pregunta_voz = transcripcion.text.strip()
+                # Intentar OpenAI como respaldo
 
-            st.session_state.audio_procesado = audio_hash
+                if openai_disponible:
 
-            if pregunta_voz:
+                    try:
 
-                st.info(
-                    f"🎙️ **Has dicho:** {pregunta_voz}"
+                        with st.spinner(
+                            "🔵 Intentando transcripción con OpenAI..."
+                        ):
+
+                            archivo_audio = (
+                                "mensaje.wav",
+                                audio_bytes
+                            )
+
+                            transcripcion = (
+                                cliente_openai.audio.transcriptions.create(
+                                    model="whisper-1",
+                                    file=archivo_audio
+                                )
+                            )
+
+                        pregunta_voz = transcripcion.text.strip()
+
+                        st.session_state.audio_procesado = audio_hash
+
+                    except Exception as e2:
+
+                        st.error(
+                            "❌ Ningún motor pudo transcribir el audio."
+                        )
+
+                        st.caption(
+                            f"Groq: {e}"
+                        )
+
+                        st.caption(
+                            f"OpenAI: {e2}"
+                        )
+
+        elif openai_disponible:
+
+            try:
+
+                with st.spinner(
+                    "🔵 Transcribiendo con OpenAI..."
+                ):
+
+                    transcripcion = (
+                        cliente_openai.audio.transcriptions.create(
+                            model="whisper-1",
+                            file=(
+                                "mensaje.wav",
+                                audio_bytes
+                            )
+                        )
+                    )
+
+                pregunta_voz = transcripcion.text.strip()
+
+                st.session_state.audio_procesado = audio_hash
+
+            except Exception as e:
+
+                st.error(
+                    "❌ No se ha podido transcribir el audio."
                 )
 
-        except Exception as e:
+                st.caption(
+                    f"Error: {e}"
+                )
 
-            st.error(
-                "❌ No se ha podido transcribir el audio."
-            )
 
-            st.caption(
-                f"Error de voz: {e}"
+        if pregunta_voz:
+
+            st.info(
+                f"🎙️ **Has dicho:** {pregunta_voz}"
             )
 
 
@@ -524,14 +683,65 @@ else:
 
 
 # ==============================================================================
-# 13. PROCESAMIENTO DE XISUS
+# 13. FUNCIÓN PARA CONSTRUIR IMAGEN
+# ==============================================================================
+
+def crear_contenido_con_imagen(pregunta, imagen):
+
+    imagen_base64 = base64.b64encode(
+        imagen
+    ).decode("utf-8")
+
+
+    if imagen.startswith(b"\x89PNG"):
+
+        tipo_imagen = "image/png"
+
+    elif imagen.startswith(b"RIFF"):
+
+        tipo_imagen = "image/webp"
+
+    elif imagen.startswith(b"\xff\xd8"):
+
+        tipo_imagen = "image/jpeg"
+
+    else:
+
+        tipo_imagen = "image/jpeg"
+
+
+    imagen_data_url = (
+        f"data:{tipo_imagen};base64,"
+        f"{imagen_base64}"
+    )
+
+
+    return [
+
+        {
+            "type": "text",
+            "text": pregunta
+        },
+
+        {
+            "type": "image_url",
+            "image_url": {
+                "url": imagen_data_url
+            }
+        }
+
+    ]
+
+
+# ==============================================================================
+# 14. PROCESAMIENTO PRINCIPAL
 # ==============================================================================
 
 if pregunta:
 
-    # ==========================================================================
+    # --------------------------------------------------------------------------
     # MOSTRAR MENSAJE DEL USUARIO
-    # ==========================================================================
+    # --------------------------------------------------------------------------
 
     with st.chat_message("user"):
 
@@ -547,167 +757,247 @@ if pregunta:
             )
 
 
-    try:
+    # --------------------------------------------------------------------------
+    # CONSTRUIR HISTORIAL PARA LA IA
+    # --------------------------------------------------------------------------
 
-        # ======================================================================
-        # CONSTRUIR MENSAJES
-        # ======================================================================
+    mensajes = [
 
-        mensajes = [
-
-            {
-                "role": "system",
-                "content": instrucciones[
-                    personalidad_visual
-                ]
-            }
-
-        ]
-
-
-        # ======================================================================
-        # HISTORIAL
-        # ======================================================================
-
-        for mensaje in st.session_state.historial[-16:]:
-
-            mensajes.append(
-                {
-                    "role": mensaje["role"],
-                    "content": mensaje["content"]
-                }
-            )
-
-
-        # ======================================================================
-        # MENSAJE ACTUAL
-        # ======================================================================
-
-        if imagen is not None:
-
-            imagen_base64 = base64.b64encode(
-                imagen
-            ).decode("utf-8")
-
-
-            # Detectar formato
-
-            if imagen.startswith(b"\x89PNG"):
-
-                tipo_imagen = "image/png"
-
-            elif imagen.startswith(b"RIFF"):
-
-                tipo_imagen = "image/webp"
-
-            elif imagen.startswith(b"\xff\xd8"):
-
-                tipo_imagen = "image/jpeg"
-
-            else:
-
-                tipo_imagen = "image/jpeg"
-
-
-            imagen_data_url = (
-                f"data:{tipo_imagen};base64,"
-                f"{imagen_base64}"
-            )
-
-
-            contenido_usuario = [
-
-                {
-                    "type": "text",
-                    "text": pregunta
-                },
-
-                {
-                    "type": "image_url",
-                    "image_url": {
-                        "url": imagen_data_url
-                    }
-                }
-
+        {
+            "role": "system",
+            "content": instrucciones[
+                personalidad_visual
             ]
+        }
 
-        else:
-
-            contenido_usuario = pregunta
+    ]
 
 
-        # ======================================================================
-        # AÑADIR MENSAJE ACTUAL
-        # ======================================================================
+    for mensaje in st.session_state.historial[-16:]:
 
         mensajes.append(
             {
-                "role": "user",
-                "content": contenido_usuario
+                "role": mensaje["role"],
+                "content": mensaje["content"]
             }
         )
 
 
-        # ======================================================================
-        # SELECCIONAR MODELO
-        # ======================================================================
+    # --------------------------------------------------------------------------
+    # MENSAJE ACTUAL
+    # --------------------------------------------------------------------------
 
-        if imagen is not None:
+    if imagen is not None:
 
-            # Modelo multimodal actual de Groq
-            modelo_final = "qwen/qwen3.6-27b"
+        contenido_usuario = crear_contenido_con_imagen(
+            pregunta,
+            imagen
+        )
 
-        else:
+    else:
 
-            modelo_final = modelo_visual
+        contenido_usuario = pregunta
 
 
-        # ======================================================================
-        # GENERAR RESPUESTA
-        # ======================================================================
+    mensajes.append(
+        {
+            "role": "user",
+            "content": contenido_usuario
+        }
+    )
 
-        with st.chat_message("assistant"):
+
+    # ==========================================================================
+    # 15. GROQ — MOTOR PRINCIPAL
+    # ==========================================================================
+
+    respuesta_completa = ""
+
+    respuesta_generada = False
+
+    error_groq = None
+
+
+    if groq_disponible:
+
+        try:
+
+            with st.chat_message("assistant"):
+
+                placeholder = st.empty()
+
+                placeholder.caption(
+                    "🟢 XISUS está pensando con Groq..."
+                )
+
+
+                # Si hay imagen usamos el modelo multimodal.
+                # Si no hay imagen utilizamos el modelo elegido.
+
+                if imagen is not None:
+
+                    modelo_final_groq = "qwen/qwen3.6-27b"
+
+                else:
+
+                    modelo_final_groq = modelo_groq
+
+
+                stream = cliente_groq.chat.completions.create(
+
+                    model=modelo_final_groq,
+
+                    messages=mensajes,
+
+                    temperature=temperatura,
+
+                    max_completion_tokens=max_tokens,
+
+                    stream=True
+
+                )
+
+
+                for chunk in stream:
+
+                    if not chunk.choices:
+
+                        continue
+
+                    delta = chunk.choices[0].delta
+
+                    if delta.content:
+
+                        respuesta_completa += delta.content
+
+                        placeholder.markdown(
+                            respuesta_completa
+                        )
+
+
+                if respuesta_completa.strip():
+
+                    respuesta_generada = True
+
+                    st.session_state.ultimo_motor = "Groq"
+
+
+        except Exception as e:
+
+            error_groq = e
 
             respuesta_completa = ""
 
-            placeholder = st.empty()
 
+    # ==========================================================================
+    # 16. OPENAI — MOTOR SECUNDARIO
+    # ==========================================================================
 
-            stream = cliente.chat.completions.create(
+    if not respuesta_generada:
 
-                model=modelo_final,
+        if openai_disponible:
 
-                messages=mensajes,
+            try:
 
-                temperature=temperatura,
+                with st.chat_message("assistant"):
 
-                max_completion_tokens=max_tokens,
+                    placeholder = st.empty()
 
-                stream=True
-
-            )
-
-
-            for chunk in stream:
-
-                if not chunk.choices:
-
-                    continue
-
-                delta = chunk.choices[0].delta
-
-                if delta.content:
-
-                    respuesta_completa += delta.content
-
-                    placeholder.markdown(
-                        respuesta_completa
+                    placeholder.caption(
+                        "🔵 Groq no respondió. XISUS está usando OpenAI..."
                     )
 
 
-        # ======================================================================
-        # GUARDAR MENSAJE DEL USUARIO
-        # ======================================================================
+                    # OpenAI recibe el mismo historial.
+
+                    stream_openai = (
+                        cliente_openai.chat.completions.create(
+
+                            model=modelo_openai,
+
+                            messages=mensajes,
+
+                            temperature=temperatura,
+
+                            max_completion_tokens=max_tokens,
+
+                            stream=True
+
+                        )
+                    )
+
+
+                    for chunk in stream_openai:
+
+                        if not chunk.choices:
+
+                            continue
+
+                        delta = chunk.choices[0].delta
+
+                        if delta.content:
+
+                            respuesta_completa += delta.content
+
+                            placeholder.markdown(
+                                respuesta_completa
+                            )
+
+
+                    if respuesta_completa.strip():
+
+                        respuesta_generada = True
+
+                        st.session_state.ultimo_motor = (
+                            "OpenAI (respaldo)"
+                        )
+
+
+            except Exception as e:
+
+                if error_groq:
+
+                    st.error(
+                        "❌ Groq y OpenAI han fallado."
+                    )
+
+                    st.caption(
+                        f"Error Groq: {error_groq}"
+                    )
+
+                    st.caption(
+                        f"Error OpenAI: {e}"
+                    )
+
+                else:
+
+                    st.error(
+                        "❌ OpenAI no ha podido generar la respuesta."
+                    )
+
+                    st.caption(
+                        f"Error: {e}"
+                    )
+
+
+        else:
+
+            if error_groq:
+
+                st.error(
+                    "❌ Groq ha fallado y OpenAI no está configurado."
+                )
+
+                st.caption(
+                    f"Error Groq: {error_groq}"
+                )
+
+
+    # ==========================================================================
+    # 17. GUARDAR CONVERSACIÓN
+    # ==========================================================================
+
+    if respuesta_generada:
 
         st.session_state.historial.append(
             {
@@ -717,10 +1007,6 @@ if pregunta:
         )
 
 
-        # ======================================================================
-        # GUARDAR RESPUESTA DE XISUS
-        # ======================================================================
-
         st.session_state.historial.append(
             {
                 "role": "assistant",
@@ -729,29 +1015,37 @@ if pregunta:
         )
 
 
-        # ======================================================================
-        # LIMPIAR IMAGEN DESPUÉS DE USARLA
-        # ======================================================================
+        # ----------------------------------------------------------------------
+        # MOSTRAR MOTOR UTILIZADO
+        # ----------------------------------------------------------------------
+
+        if st.session_state.ultimo_motor == "Groq":
+
+            st.caption(
+                "🟢 Motor utilizado: Groq — principal"
+            )
+
+        elif (
+            st.session_state.ultimo_motor
+            == "OpenAI (respaldo)"
+        ):
+
+            st.caption(
+                "🔵 Motor utilizado: OpenAI — secundario"
+            )
+
+
+        # ----------------------------------------------------------------------
+        # LIMPIAR IMAGEN
+        # ----------------------------------------------------------------------
 
         if imagen is not None:
 
             st.session_state.imagen_actual = None
 
 
-        # ======================================================================
+        # ----------------------------------------------------------------------
         # RECARGAR
-        # ======================================================================
+        # ----------------------------------------------------------------------
 
         st.rerun()
-
-
-    except Exception as e:
-
-        st.error(
-            "😕 XISUS ha tenido un problema al generar la respuesta."
-        )
-
-        st.caption(
-            f"Error detectado: {e}"
-        )
-```
