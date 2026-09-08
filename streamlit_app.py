@@ -1309,67 +1309,82 @@ if pregunta:
         )
 
 
-        # ======================================================================
-        # 20. GENERAR VOZ
-        # ======================================================================
+        
+# ======================================================================
+# 20. GENERAR VOZ
+# ======================================================================
 
-        if voz_activada:
+if voz_activada:
 
-            if openai_disponible:
+    if openai_disponible:
 
-                try:
+        try:
 
-                    with st.spinner(
-                        "🔊 XISUS está preparando su voz..."
-                    ):
+            with st.spinner(
+                "🔊 XISUS está preparando su voz..."
+            ):
 
-                        audios_generados = (
-                            generar_voz_openai(
+                audios_generados = generar_voz_openai(
+                    respuesta_completa,
+                    voz=voz_xisus,
+                    velocidad=velocidad_voz
+                )
 
-                                respuesta_completa,
+            if audios_generados:
 
-                                voz=voz_xisus,
+                st.session_state.audio_respuesta = (
+                    audios_generados
+                )
 
-                                velocidad=velocidad_voz
-                            )
-                        )
+                st.session_state.texto_audio_generado = (
+                    respuesta_completa
+                )
 
-if audios_generados:
+                st.session_state.voz_generada_hash = (
+                    hashlib.md5(
+                        respuesta_completa.encode("utf-8")
+                    ).hexdigest()
+                )
 
-    st.session_state.audio_respuesta = (
-        audios_generados
-    )
+                # DIAGNÓSTICO
+                st.success(
+                    f"🔊 Voz generada correctamente. "
+                    f"{len(audios_generados)} archivo(s) de audio."
+                )
 
-    st.session_state.texto_audio_generado = (
-        respuesta_completa
-    )
+                for i, audio in enumerate(
+                    audios_generados,
+                    start=1
+                ):
 
-    st.session_state.voz_generada_hash = (
-        hashlib.md5(
-            respuesta_completa.encode("utf-8")
-        ).hexdigest()
-    )
+                    st.caption(
+                        f"Audio {i}: {len(audio):,} bytes"
+                    )
 
-    # Diagnóstico
-    st.success(
-        f"🔊 Voz generada correctamente. "
-        f"{len(audios_generados)} archivo(s) de audio."
-    )
+            else:
 
-    for i, audio in enumerate(
-        audios_generados,
-        start=1
-    ):
+                st.error(
+                    "❌ OpenAI no devolvió ningún audio."
+                )
 
-        st.caption(
-            f"Audio {i}: {len(audio):,} bytes"
+        except Exception as e:
+
+            st.warning(
+                "⚠️ XISUS ha respondido por texto, "
+                "pero no ha podido generar la voz."
+            )
+
+            st.error(
+                f"Error TTS: {e}"
+            )
+
+    else:
+
+        st.warning(
+            "🔵 Para utilizar la voz necesitas "
+            "configurar OPENAI_API_KEY."
         )
 
-else:
-
-    st.error(
-        "❌ OpenAI no devolvió ningún audio."
-    )
 
 
         # ======================================================================
