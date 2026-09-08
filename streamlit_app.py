@@ -1338,41 +1338,42 @@ if pregunta:
                             )
                         )
 
-                    if audios_generados:
+if audios_generados:
 
-                        st.session_state.audio_respuesta = (
-                            audios_generados
-                        )
+    st.session_state.audio_respuesta = (
+        audios_generados
+    )
 
-                        st.session_state.texto_audio_generado = (
-                            respuesta_completa
-                        )
+    st.session_state.texto_audio_generado = (
+        respuesta_completa
+    )
 
-                        st.session_state.voz_generada_hash = (
-                            hashlib.md5(
-                                respuesta_completa.encode(
-                                    "utf-8"
-                                )
-                            ).hexdigest()
-                        )
+    st.session_state.voz_generada_hash = (
+        hashlib.md5(
+            respuesta_completa.encode("utf-8")
+        ).hexdigest()
+    )
 
-                except Exception as e:
+    # Diagnóstico
+    st.success(
+        f"🔊 Voz generada correctamente. "
+        f"{len(audios_generados)} archivo(s) de audio."
+    )
 
-                    st.warning(
-                        "⚠️ XISUS ha respondido por texto, "
-                        "pero no ha podido generar la voz."
-                    )
+    for i, audio in enumerate(
+        audios_generados,
+        start=1
+    ):
 
-                    st.caption(
-                        f"Error TTS: {e}"
-                    )
+        st.caption(
+            f"Audio {i}: {len(audio):,} bytes"
+        )
 
-            else:
+else:
 
-                st.warning(
-                    "🔵 Para utilizar la voz necesitas "
-                    "configurar OPENAI_API_KEY."
-                )
+    st.error(
+        "❌ OpenAI no devolvió ningún audio."
+    )
 
 
         # ======================================================================
