@@ -776,7 +776,6 @@ for mensaje in st.session_state.historial:
 # ==============================================================================
 # 11. MOSTRAR ÚLTIMA RESPUESTA DE VOZ
 # ==============================================================================
-
 if (
     voz_activada
     and st.session_state.audio_respuesta
@@ -799,13 +798,15 @@ if (
                 f"Parte {numero}"
             )
 
+        # IMPORTANTE:
+        # Aquí hay que reproducir "audio", no la lista completa.
+
         st.audio(
-            st.session_state.audio_respuesta,
+            audio,
             format="audio/mp3"
         )
 
-
-# ==============================================================================
+# =============================================================================
 # 12. VOZ → TEXTO
 # ==============================================================================
 
