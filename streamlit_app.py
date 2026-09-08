@@ -204,4 +204,4 @@ with st.sidebar:
             key="imagen_subida"
         )
 
-    elif modo_imagen == "📸 Usar cámara"
+    elif modo_imagen == "📸 Usar cámara":
