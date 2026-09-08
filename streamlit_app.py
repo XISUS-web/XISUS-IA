@@ -1,5 +1,6 @@
 import streamlit as st
 from openai import OpenAI
+import base64
 
 # ==============================================================================
 # 1. CONFIGURACIÓN ESTÉTICA DE LA PÁGINA
@@ -110,14 +111,6 @@ with st.sidebar:
 
     st.subheader("Ajustes Avanzados")
 
-    temperatura = st.slider(
-        "Creatividad (Temperatura):",
-        min_value=0.0,
-        max_value=2.0,
-        value=0.7,
-        step=0.1
-    )
-
     max_tokens = st.slider(
         "Longitud Máxima de Respuesta:",
         min_value=100,
@@ -214,6 +207,42 @@ for mensaje in st.session_state.historial:
 # ==============================================================================
 # 9. INPUT DEL CHAT
 # ==============================================================================
+# ==============================================================================
+# 9. IMÁGENES: SUBIR O HACER UNA FOTO
+# ==============================================================================
+
+st.markdown("### 📷 Dale una imagen a XISUS")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    imagen_subida = st.file_uploader(
+        "📁 Subir una imagen",
+        type=["jpg", "jpeg", "png", "webp"],
+        key="imagen_subida"
+    )
+
+with col2:
+    imagen_camara = st.camera_input(
+        "📸 Hacer una foto",
+        key="imagen_camara"
+    )
+
+# Elegir qué imagen utilizar
+imagen = imagen_camara if imagen_camara is not None else imagen_subida
+
+# Mostrar la imagen seleccionada
+if imagen is not None:
+
+    st.image(
+        imagen,
+        caption="Imagen que verá XISUS",
+        width=400
+    )
+
+# ==============================================================================
+# 10. INPUT DEL CHAT
+# ==============================================================================
 
 pregunta = st.chat_input(
     "Escribe tu consulta aquí para hablar con tu calvito..."
@@ -227,21 +256,72 @@ if pregunta:
 
     # Mostrar mensaje del usuario
     with st.chat_message("user"):
+
         st.markdown(pregunta)
 
-    # Guardar mensaje del usuario
-    st.session_state.historial.append({
-        "role": "user",
-        "content": pregunta
-    })
+        # Si hay imagen, mostrarla también en el mensaje
+        if imagen is not None:
+            st.image(
+                imagen,
+                width=400
+            )
 
     try:
 
-        # Solo enviamos las últimas 16 intervenciones
-        historial_limitado = st.session_state.historial[-16:]
+        # ======================================================================
+        # PREPARAR EL MENSAJE
+        # ======================================================================
+
+        if imagen is not None:
+
+            # Convertir la imagen a Base64
+            imagen_bytes = imagen.getvalue()
+
+            imagen_base64 = base64.b64encode(
+                imagen_bytes
+            ).decode("utf-8")
+
+            # Detectar el tipo MIME
+            tipo_imagen = imagen.type
+
+            # Crear Data URL
+            imagen_data_url = (
+                f"data:{tipo_imagen};base64,{imagen_base64}"
+            )
+
+            # Mensaje multimodal: texto + imagen
+            contenido_usuario = [
+                {
+                    "type": "input_text",
+                    "text": pregunta
+                },
+                {
+                    "type": "input_image",
+                    "image_url": imagen_data_url,
+                    "detail": "auto"
+                }
+            ]
+
+        else:
+
+            # Mensaje normal de texto
+            contenido_usuario = pregunta
 
         # ======================================================================
-        # RESPUESTA DE XISUS CON STREAMING
+        # CREAR HISTORIAL PARA OPENAI
+        # ======================================================================
+
+        historial_limitado = st.session_state.historial[-16:]
+
+        historial_para_openai = historial_limitado + [
+            {
+                "role": "user",
+                "content": contenido_usuario
+            }
+        ]
+
+        # ======================================================================
+        # RESPUESTA DE XISUS
         # ======================================================================
 
         with st.chat_message("assistant"):
@@ -249,12 +329,13 @@ if pregunta:
             stream = cliente.responses.create(
                 model=modelo_visual,
                 instructions=instrucciones[personalidad_visual],
-                input=historial_limitado,
+                input=historial_para_openai,
                 max_output_tokens=max_tokens,
                 stream=True
             )
 
             respuesta_completa = ""
+
             placeholder = st.empty()
 
             for evento in stream:
@@ -262,10 +343,22 @@ if pregunta:
                 if evento.type == "response.output_text.delta":
 
                     respuesta_completa += evento.delta
-                    placeholder.markdown(respuesta_completa)
+
+                    placeholder.markdown(
+                        respuesta_completa
+                    )
 
         # ======================================================================
-        # GUARDAR RESPUESTA
+        # GUARDAR MENSAJE DEL USUARIO
+        # ======================================================================
+
+        st.session_state.historial.append({
+            "role": "user",
+            "content": pregunta
+        })
+
+        # ======================================================================
+        # GUARDAR RESPUESTA DE XISUS
         # ======================================================================
 
         st.session_state.historial.append({
@@ -276,8 +369,10 @@ if pregunta:
     except Exception as e:
 
         st.error(
-            "😕 Ocurrió un inconveniente técnico al contactar "
-            "con la inteligencia artificial."
+            "😕 Ocurrió un inconveniente técnico al "
+            "analizar la imagen o generar la respuesta."
         )
 
-        st.caption(f"Error detectado: {e}")
+        st.caption(
+            f"Error detectado: {e}"
+        )
