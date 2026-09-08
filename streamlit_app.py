@@ -178,30 +178,44 @@ with st.sidebar:
 
     st.subheader("📷 Imágenes")
 
-    modo_imagen = st.radio(
-        "¿Quieres añadir una imagen?",
-        [
-            "Ninguna",
-            "📁 Subir imagen",
-            "📸 Usar cámara"
+modo_imagen = st.radio(
+    "¿Quieres añadir una imagen?",
+    [
+        "Ninguna",
+        "📁 Subir imagen",
+        "📸 Usar cámara"
+    ],
+    index=0
+)
+
+imagen_subida = None
+imagen_camara = None
+
+if modo_imagen == "📁 Subir imagen":
+
+    imagen_subida = st.file_uploader(
+        "Selecciona una imagen",
+        type=[
+            "jpg",
+            "jpeg",
+            "png",
+            "webp"
         ],
-        index=0
+        key="imagen_subida"
     )
 
-    imagen_subida = None
-    imagen_camara = None
+elif modo_imagen == "📸 Usar cámara":
 
-    if modo_imagen == "📁 Subir imagen":
+    imagen_camara = st.camera_input(
+        "Haz una foto para XISUS",
+        key="imagen_camara"
+    )
 
-        imagen_subida = st.file_uploader(
-            "Selecciona una imagen",
-            type=[
-                "jpg",
-                "jpeg",
-                "png",
-                "webp"
-            ],
-            key="imagen_subida"
-        )
+imagen_nueva = (
+    imagen_camara
+    if imagen_camara is not None
+    else imagen_subida
+)
 
-    elif modo_imagen == "📸 Usar cámara":
+if imagen_nueva is not None:
+    st.session_state.imagen_actual = imagen_nueva
