@@ -1,9 +1,11 @@
+
 import streamlit as st
 from openai import OpenAI
 import base64
 
+
 # ==============================================================================
-# 1. CONFIGURACIÓN
+# 1. CONFIGURACIÓN DE LA PÁGINA
 # ==============================================================================
 
 st.set_page_config(
@@ -12,6 +14,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 
 # ==============================================================================
 # 2. ESTILO
@@ -45,70 +48,120 @@ h1, h2, h3, h4 {
 </style>
 """, unsafe_allow_html=True)
 
+
 # ==============================================================================
-# 3. OPENAI
+# 3. API KEYS
 # ==============================================================================
 
 try:
 
-    API_KEY = st.secrets["OPENAI_API_KEY"]
+    GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
-    cliente = OpenAI(
-        api_key=API_KEY
-    )
-
-except Exception as e:
+except Exception:
 
     st.error(
-        "🔑 No se ha podido conectar con OpenAI."
-    )
-
-    st.caption(
-        f"Error: {e}"
+        "🔑 Falta GROQ_API_KEY en los Secrets de Streamlit."
     )
 
     st.stop()
 
+
+# OpenAI es opcional porque solamente se utilizará como respaldo.
+
+OPENAI_API_KEY = st.secrets.get(
+    "OPENAI_API_KEY",
+    None
+)
+
+
 # ==============================================================================
-# 4. MEMORIA
+# 4. CLIENTES
+# ==============================================================================
+
+# Cliente principal: GROQ
+cliente_groq = OpenAI(
+    api_key=GROQ_API_KEY,
+    base_url="https://api.groq.com/openai/v1"
+)
+
+
+# Cliente secundario: OPENAI
+cliente_openai = None
+
+if OPENAI_API_KEY:
+
+    cliente_openai = OpenAI(
+        api_key=OPENAI_API_KEY
+    )
+
+
+# ==============================================================================
+# 5. MEMORIA
 # ==============================================================================
 
 if "historial" not in st.session_state:
+
     st.session_state.historial = []
 
+
 if "imagen_actual" not in st.session_state:
+
     st.session_state.imagen_actual = None
 
+
+if "audio_procesado" not in st.session_state:
+
+    st.session_state.audio_procesado = None
+
+
 # ==============================================================================
-# 5. PERSONALIDADES
+# 6. PERSONALIDADES
 # ==============================================================================
 
 instrucciones = {
 
     "Normal":
-        "Eres XISUS, tu calvito de confianza. "
-        "Eres útil, inteligente, claro y natural.",
+        """
+        Eres XISUS, tu calvito de confianza.
+        Eres útil, inteligente, claro y natural.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Amigable":
-        "Eres XISUS, un asistente extremadamente amigable, "
-        "entusiasta y cálido. Hablas de forma natural y cercana.",
+        """
+        Eres XISUS, un asistente extremadamente amigable,
+        entusiasta y cálido.
+        Hablas de forma natural, cercana y agradable.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Profesional":
-        "Eres XISUS, un asistente serio, profesional, "
-        "preciso, formal y directo.",
+        """
+        Eres XISUS, un asistente serio, profesional,
+        preciso, formal y directo.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Divertido":
-        "Eres XISUS. Tienes mucho sentido del humor, "
-        "haces bromas ligeras y eres divertido, "
-        "pero siempre das respuestas útiles.",
+        """
+        Eres XISUS.
+        Tienes mucho sentido del humor y haces bromas ligeras.
+        Eres divertido y cercano, pero siempre das respuestas útiles.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Conciso":
-        "Eres XISUS. Responde de forma extremadamente corta, "
-        "clara y directa."
+        """
+        Eres XISUS.
+        Responde de forma extremadamente corta,
+        clara y directa.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """
 }
 
+
 # ==============================================================================
-# 6. BARRA LATERAL
+# 7. BARRA LATERAL
 # ==============================================================================
 
 with st.sidebar:
@@ -120,6 +173,7 @@ with st.sidebar:
 
     st.markdown("---")
 
+
     # --------------------------------------------------------------------------
     # MODELO
     # --------------------------------------------------------------------------
@@ -129,12 +183,16 @@ with st.sidebar:
     modelo_visual = st.selectbox(
         "Selecciona el cerebro:",
         [
-            "gpt-5.6-luna",
-            "gpt-5.6-terra",
-            "gpt-5.6-sol"
+            "qwen/qwen3.6-27b",
+            "openai/gpt-oss-20b"
         ],
         index=0
     )
+
+    st.caption(
+        "Qwen Vision permite analizar imágenes."
+    )
+
 
     # --------------------------------------------------------------------------
     # PERSONALIDAD
@@ -151,6 +209,7 @@ with st.sidebar:
         ]
     )
 
+
     # --------------------------------------------------------------------------
     # LONGITUD
     # --------------------------------------------------------------------------
@@ -166,6 +225,7 @@ with st.sidebar:
         value=1500,
         step=100
     )
+
 
     # --------------------------------------------------------------------------
     # IMÁGENES
@@ -187,6 +247,7 @@ with st.sidebar:
 
     imagen_nueva = None
 
+
     if modo_imagen == "📁 Subir imagen":
 
         imagen_nueva = st.file_uploader(
@@ -200,6 +261,7 @@ with st.sidebar:
             key="uploader_imagen"
         )
 
+
     elif modo_imagen == "📸 Hacer foto":
 
         imagen_nueva = st.camera_input(
@@ -207,15 +269,21 @@ with st.sidebar:
             key="camara_imagen"
         )
 
+
     # Guardar imagen
+
     if imagen_nueva is not None:
 
         st.session_state.imagen_actual = imagen_nueva
 
-    # Mostrar que hay una imagen guardada
+
+    # Mostrar estado de imagen
+
     if st.session_state.imagen_actual is not None:
 
-        st.success("🟢 Imagen preparada")
+        st.success(
+            "🟢 Imagen preparada"
+        )
 
         if st.button(
             "🗑️ Quitar imagen",
@@ -225,6 +293,7 @@ with st.sidebar:
             st.session_state.imagen_actual = None
 
             st.rerun()
+
 
     # --------------------------------------------------------------------------
     # VOZ
@@ -244,6 +313,7 @@ with st.sidebar:
         key="audio_usuario"
     )
 
+
     # --------------------------------------------------------------------------
     # LIMPIAR CHAT
     # --------------------------------------------------------------------------
@@ -257,7 +327,12 @@ with st.sidebar:
 
         st.session_state.historial = []
 
+        st.session_state.imagen_actual = None
+
+        st.session_state.audio_procesado = None
+
         st.rerun()
+
 
     # --------------------------------------------------------------------------
     # ESTADO
@@ -268,11 +343,24 @@ with st.sidebar:
     st.subheader("💬 Estado")
 
     st.success(
-        "🟢 OpenAI conectada"
+        "🟢 Groq conectado"
     )
 
+    if cliente_openai:
+
+        st.info(
+            "🔵 OpenAI disponible como respaldo"
+        )
+
+    else:
+
+        st.warning(
+            "⚠️ OpenAI no configurado"
+        )
+
+
 # ==============================================================================
-# 7. CABECERA PRINCIPAL
+# 8. CABECERA
 # ==============================================================================
 
 URL_DE_TU_IMAGEN = (
@@ -283,6 +371,7 @@ st.image(
     URL_DE_TU_IMAGEN,
     width=200
 )
+
 
 st.markdown(
     """
@@ -297,6 +386,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 st.markdown(
     """
     <p style="
@@ -309,22 +399,29 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 st.write(
     "XISUS IA puede responder preguntas, mantener conversaciones, "
     "analizar imágenes y recibir mensajes mediante voz."
 )
 
+
 st.markdown("---")
 
+
 # ==============================================================================
-# 8. MOSTRAR IMAGEN ACTUAL
+# 9. IMAGEN PREPARADA
 # ==============================================================================
 
 imagen = st.session_state.imagen_actual
 
+
 if imagen is not None:
 
-    with st.expander("📷 Imagen preparada", expanded=True):
+    with st.expander(
+        "📷 Imagen preparada",
+        expanded=True
+    ):
 
         st.image(
             imagen,
@@ -335,8 +432,9 @@ if imagen is not None:
             "XISUS utilizará esta imagen cuando envíes tu pregunta."
         )
 
+
 # ==============================================================================
-# 9. MOSTRAR HISTORIAL
+# 10. MOSTRAR HISTORIAL
 # ==============================================================================
 
 for mensaje in st.session_state.historial:
@@ -349,58 +447,83 @@ for mensaje in st.session_state.historial:
             mensaje["content"]
         )
 
+
 # ==============================================================================
-# 10. PROCESAR VOZ
+# 11. TRANSCRIPCIÓN DE VOZ
 # ==============================================================================
 
 pregunta_voz = None
 
+
 if audio_usuario is not None:
 
-    try:
+    audio_bytes = audio_usuario.getvalue()
 
-        with st.spinner(
-            "🎙️ Transcribiendo tu voz..."
-        ):
+    audio_id = hash(audio_bytes)
 
-            transcripcion = cliente.audio.transcriptions.create(
-                model="gpt-4o-mini-transcribe",
-                file=(
-                    "mensaje.wav",
-                    audio_usuario.getvalue(),
-                    "audio/wav"
-                ),
-                language="es"
+
+    # Evitamos volver a transcribir exactamente el mismo audio
+    # en cada rerun de Streamlit.
+
+    if (
+        st.session_state.audio_procesado
+        != audio_id
+    ):
+
+        try:
+
+            with st.spinner(
+                "🎙️ XISUS está escuchando..."
+            ):
+
+                transcripcion = cliente_groq.audio.transcriptions.create(
+
+                    model="whisper-large-v3-turbo",
+
+                    file=(
+                        "mensaje.wav",
+                        audio_bytes,
+                        "audio/wav"
+                    ),
+
+                    language="es"
+                )
+
+
+            pregunta_voz = transcripcion.text
+
+            st.session_state.audio_procesado = audio_id
+
+
+            if pregunta_voz:
+
+                st.info(
+                    f"🎙️ Has dicho: {pregunta_voz}"
+                )
+
+
+        except Exception as e:
+
+            st.error(
+                "❌ No se ha podido transcribir el audio."
             )
 
-        pregunta_voz = transcripcion.text
-
-        if pregunta_voz:
-
-            st.info(
-                f"🎙️ **Has dicho:** {pregunta_voz}"
+            st.caption(
+                f"Error: {e}"
             )
 
-    except Exception as e:
-
-        st.error(
-            "❌ No se ha podido transcribir el audio."
-        )
-
-        st.caption(
-            f"Error: {e}"
-        )
 
 # ==============================================================================
-# 11. CHAT DE TEXTO
+# 12. CHAT DE TEXTO
 # ==============================================================================
 
 pregunta_texto = st.chat_input(
     "Escribe tu consulta aquí para hablar con tu calvito..."
 )
 
+
 # ==============================================================================
-# 12. ELEGIR TEXTO O VOZ
+# 13. ELEGIR TEXTO O VOZ
 # ==============================================================================
 
 if pregunta_voz:
@@ -411,14 +534,15 @@ else:
 
     pregunta = pregunta_texto
 
+
 # ==============================================================================
-# 13. PROCESAMIENTO DE XISUS
+# 14. PROCESAMIENTO
 # ==============================================================================
 
 if pregunta:
 
     # --------------------------------------------------------------------------
-    # MOSTRAR PREGUNTA DEL USUARIO
+    # MOSTRAR PREGUNTA
     # --------------------------------------------------------------------------
 
     with st.chat_message("user"):
@@ -434,10 +558,11 @@ if pregunta:
                 width=400
             )
 
+
     try:
 
         # ======================================================================
-        # PREPARAR CONTENIDO
+        # PREPARAR IMAGEN
         # ======================================================================
 
         if imagen is not None:
@@ -453,6 +578,7 @@ if pregunta:
             imagen_data_url = (
                 f"data:{tipo_imagen};base64,{imagen_base64}"
             )
+
 
             contenido_usuario = [
 
@@ -473,6 +599,7 @@ if pregunta:
 
             contenido_usuario = pregunta
 
+
         # ======================================================================
         # HISTORIAL
         # ======================================================================
@@ -480,6 +607,7 @@ if pregunta:
         historial_limitado = (
             st.session_state.historial[-16:]
         )
+
 
         historial_para_openai = (
             historial_limitado
@@ -492,48 +620,143 @@ if pregunta:
             ]
         )
 
+
         # ======================================================================
-        # RESPUESTA
+        # RESPONDER CON GROQ
         # ======================================================================
+
+        respuesta_completa = ""
+
+        uso_openai = False
+
 
         with st.chat_message("assistant"):
 
-            respuesta_completa = ""
-
             placeholder = st.empty()
 
-            stream = cliente.responses.create(
 
-                model=modelo_visual,
+            try:
 
-                instructions=(
-                    instrucciones[
-                        personalidad_visual
-                    ]
-                ),
+                # Si hay imagen usamos Qwen Vision.
+                # Si no hay imagen usamos el modelo elegido.
 
-                input=historial_para_openai,
+                if imagen is not None:
 
-                max_output_tokens=max_tokens,
+                    modelo_real = "qwen/qwen3.6-27b"
 
-                stream=True
+                else:
+
+                    modelo_real = modelo_visual
+
+
+                stream = cliente_groq.responses.create(
+
+                    model=modelo_real,
+
+                    instructions=(
+                        instrucciones[
+                            personalidad_visual
+                        ]
+                    ),
+
+                    input=historial_para_openai,
+
+                    max_output_tokens=max_tokens,
+
+                    stream=True
+                )
+
+
+                for evento in stream:
+
+                    if (
+                        evento.type
+                        ==
+                        "response.output_text.delta"
+                    ):
+
+                        respuesta_completa += (
+                            evento.delta
+                        )
+
+                        placeholder.markdown(
+                            respuesta_completa
+                        )
+
+
+            # ==================================================================
+            # FALLBACK A OPENAI
+            # ==================================================================
+
+            except Exception as error_groq:
+
+                if cliente_openai is None:
+
+                    raise error_groq
+
+
+                uso_openai = True
+
+                respuesta_completa = ""
+
+                placeholder.empty()
+
+
+                st.warning(
+                    "⚠️ Groq no ha podido responder. "
+                    "XISUS está utilizando OpenAI como respaldo."
+                )
+
+
+                # Tu modelo principal de OpenAI de respaldo.
+
+                stream_openai = (
+                    cliente_openai.responses.create(
+
+                        model="gpt-5.6-luna",
+
+                        instructions=(
+                            instrucciones[
+                                personalidad_visual
+                            ]
+                        ),
+
+                        input=historial_para_openai,
+
+                        max_output_tokens=max_tokens,
+
+                        stream=True
+                    )
+                )
+
+
+                for evento in stream_openai:
+
+                    if (
+                        evento.type
+                        ==
+                        "response.output_text.delta"
+                    ):
+
+                        respuesta_completa += (
+                            evento.delta
+                        )
+
+                        placeholder.markdown(
+                            respuesta_completa
+                        )
+
+
+        # ======================================================================
+        # COMPROBAR RESPUESTA
+        # ======================================================================
+
+        if not respuesta_completa:
+
+            st.warning(
+                "XISUS no recibió una respuesta del modelo."
             )
 
-            for evento in stream:
-
-                if (
-                    evento.type
-                    ==
-                    "response.output_text.delta"
-                ):
-
-                    respuesta_completa += (
-                        evento.delta
-                    )
-
-                    placeholder.markdown(
-                        respuesta_completa
-                    )
 
         # ======================================================================
         # GUARDAR USUARIO
@@ -546,8 +769,9 @@ if pregunta:
             }
         )
 
+
         # ======================================================================
-        # GUARDAR XISUS
+        # GUARDAR RESPUESTA
         # ======================================================================
 
         st.session_state.historial.append(
@@ -557,19 +781,22 @@ if pregunta:
             }
         )
 
+
         # ======================================================================
-        # LIMPIAR IMAGEN DESPUÉS DE USARLA
+        # LIMPIAR IMAGEN
         # ======================================================================
 
         if imagen is not None:
 
             st.session_state.imagen_actual = None
 
+
         # ======================================================================
         # RECARGAR
         # ======================================================================
 
         st.rerun()
+
 
     except Exception as e:
 
