@@ -800,9 +800,8 @@ if (
             )
 
         st.audio(
-            audio,
-            format="audio/mp3",
-            autoplay=True
+            st.session_state.audio_respuesta,
+            format="audio/mp3"
         )
 
 
