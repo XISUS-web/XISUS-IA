@@ -1,3 +1,4 @@
+```python
 import streamlit as st
 from groq import Groq
 import base64
@@ -43,8 +44,13 @@ h1, h2, h3, h4 {
     color: #0f172a !important;
 }
 
+[data-testid="stChatMessage"] {
+    border-radius: 12px;
+}
+
 </style>
 """, unsafe_allow_html=True)
+
 
 # ==============================================================================
 # 3. CONEXIÓN CON GROQ
@@ -60,15 +66,12 @@ try:
 
 except Exception as e:
 
-    st.error(
-        "🔑 No se ha podido conectar con Groq."
-    )
+    st.error("🔑 No se ha podido conectar con Groq.")
 
-    st.caption(
-        f"Error: {e}"
-    )
+    st.caption(f"Error: {e}")
 
     st.stop()
+
 
 # ==============================================================================
 # 4. MEMORIA
@@ -83,6 +86,7 @@ if "imagen_actual" not in st.session_state:
 if "audio_procesado" not in st.session_state:
     st.session_state.audio_procesado = None
 
+
 # ==============================================================================
 # 5. PERSONALIDADES
 # ==============================================================================
@@ -90,31 +94,44 @@ if "audio_procesado" not in st.session_state:
 instrucciones = {
 
     "Normal":
-        "Eres XISUS, tu calvito de confianza. "
-        "Eres útil, inteligente, claro y natural. "
-        "Responde siempre en español salvo que el usuario pida otro idioma.",
+        """
+        Eres XISUS, el calvito de confianza del usuario.
+        Eres útil, inteligente, claro y natural.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Amigable":
-        "Eres XISUS, un asistente extremadamente amigable, "
-        "entusiasta y cálido. Hablas de forma natural y cercana. "
-        "Responde siempre en español salvo que el usuario pida otro idioma.",
+        """
+        Eres XISUS, un asistente extremadamente amigable,
+        entusiasta y cercano.
+        Hablas de forma natural y cálida.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Profesional":
-        "Eres XISUS, un asistente serio, profesional, "
-        "preciso, formal y directo. "
-        "Responde siempre en español salvo que el usuario pida otro idioma.",
+        """
+        Eres XISUS, un asistente serio, profesional,
+        preciso, formal y directo.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Divertido":
-        "Eres XISUS. Tienes mucho sentido del humor, "
-        "haces bromas ligeras y eres divertido, "
-        "pero siempre das respuestas útiles. "
-        "Responde siempre en español salvo que el usuario pida otro idioma.",
+        """
+        Eres XISUS.
+        Tienes mucho sentido del humor y haces bromas ligeras,
+        pero siempre proporcionas respuestas útiles.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """,
 
     "Conciso":
-        "Eres XISUS. Responde de forma extremadamente corta, "
-        "clara y directa. "
-        "Responde siempre en español salvo que el usuario pida otro idioma."
+        """
+        Eres XISUS.
+        Responde de forma extremadamente corta,
+        clara y directa.
+        Responde siempre en español salvo que el usuario pida otro idioma.
+        """
 }
+
 
 # ==============================================================================
 # 6. BARRA LATERAL
@@ -138,12 +155,17 @@ with st.sidebar:
     modelo_visual = st.selectbox(
         "Selecciona el cerebro:",
         [
-            "llama-3.3-70b-versatile",
             "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b"
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.6-27b"
         ],
         index=0
     )
+
+    st.caption(
+        "Qwen 3.6 permite analizar imágenes."
+    )
+
 
     # ==========================================================================
     # PERSONALIDAD
@@ -157,11 +179,13 @@ with st.sidebar:
             "Profesional",
             "Divertido",
             "Conciso"
-        ]
+        ],
+        index=0
     )
 
+
     # ==========================================================================
-    # LONGITUD
+    # AJUSTES
     # ==========================================================================
 
     st.markdown("---")
@@ -184,6 +208,7 @@ with st.sidebar:
         step=0.1
     )
 
+
     # ==========================================================================
     # IMÁGENES
     # ==========================================================================
@@ -204,6 +229,7 @@ with st.sidebar:
 
     imagen_nueva = None
 
+
     # --------------------------------------------------------------------------
     # SUBIR IMAGEN
     # --------------------------------------------------------------------------
@@ -221,6 +247,7 @@ with st.sidebar:
             key="uploader_imagen"
         )
 
+
     # --------------------------------------------------------------------------
     # CÁMARA
     # --------------------------------------------------------------------------
@@ -232,13 +259,19 @@ with st.sidebar:
             key="camara_imagen"
         )
 
+
     # --------------------------------------------------------------------------
     # GUARDAR IMAGEN
     # --------------------------------------------------------------------------
 
     if imagen_nueva is not None:
 
-        st.session_state.imagen_actual = imagen_nueva.getvalue()
+        nuevo_contenido = imagen_nueva.getvalue()
+
+        if nuevo_contenido:
+
+            st.session_state.imagen_actual = nuevo_contenido
+
 
     # --------------------------------------------------------------------------
     # MOSTRAR IMAGEN PREPARADA
@@ -246,9 +279,7 @@ with st.sidebar:
 
     if st.session_state.imagen_actual is not None:
 
-        st.success(
-            "🟢 Imagen preparada"
-        )
+        st.success("🟢 Imagen preparada")
 
         st.image(
             st.session_state.imagen_actual,
@@ -263,6 +294,7 @@ with st.sidebar:
             st.session_state.imagen_actual = None
 
             st.rerun()
+
 
     # ==========================================================================
     # VOZ
@@ -281,6 +313,7 @@ with st.sidebar:
         sample_rate=16000,
         key="audio_usuario"
     )
+
 
     # ==========================================================================
     # LIMPIAR CHAT
@@ -301,6 +334,7 @@ with st.sidebar:
 
         st.rerun()
 
+
     # ==========================================================================
     # ESTADO
     # ==========================================================================
@@ -313,6 +347,7 @@ with st.sidebar:
         "🟢 Groq conectada"
     )
 
+
 # ==============================================================================
 # 7. CABECERA PRINCIPAL
 # ==============================================================================
@@ -321,10 +356,17 @@ URL_DE_TU_IMAGEN = (
     "https://i.postimg.cc/Gmx2FfpG/IMG-2-20260818-WA0020.jpg"
 )
 
-st.image(
-    URL_DE_TU_IMAGEN,
-    width=200
-)
+try:
+
+    st.image(
+        URL_DE_TU_IMAGEN,
+        width=200
+    )
+
+except Exception:
+
+    pass
+
 
 st.markdown(
     """
@@ -358,6 +400,7 @@ st.write(
 
 st.markdown("---")
 
+
 # ==============================================================================
 # 8. MOSTRAR IMAGEN PREPARADA
 # ==============================================================================
@@ -380,6 +423,7 @@ if imagen is not None:
             "La imagen se enviará cuando hagas una pregunta."
         )
 
+
 # ==============================================================================
 # 9. MOSTRAR HISTORIAL
 # ==============================================================================
@@ -394,6 +438,7 @@ for mensaje in st.session_state.historial:
             mensaje["content"]
         )
 
+
 # ==============================================================================
 # 10. TRANSCRIPCIÓN DE VOZ
 # ==============================================================================
@@ -404,12 +449,13 @@ if audio_usuario is not None:
 
     audio_bytes = audio_usuario.getvalue()
 
-    # Crear identificador único del audio
     audio_hash = hashlib.md5(
         audio_bytes
     ).hexdigest()
 
-    # Evitar transcribir el mismo audio repetidamente
+
+    # Evitar procesar el mismo audio varias veces
+
     if (
         st.session_state.audio_procesado
         != audio_hash
@@ -434,7 +480,7 @@ if audio_usuario is not None:
                     )
                 )
 
-            pregunta_voz = transcripcion.text
+            pregunta_voz = transcripcion.text.strip()
 
             st.session_state.audio_procesado = audio_hash
 
@@ -454,6 +500,7 @@ if audio_usuario is not None:
                 f"Error de voz: {e}"
             )
 
+
 # ==============================================================================
 # 11. CHAT DE TEXTO
 # ==============================================================================
@@ -461,6 +508,7 @@ if audio_usuario is not None:
 pregunta_texto = st.chat_input(
     "Escribe tu consulta aquí para hablar con tu calvito..."
 )
+
 
 # ==============================================================================
 # 12. ELEGIR PREGUNTA
@@ -473,6 +521,7 @@ if pregunta_voz:
 else:
 
     pregunta = pregunta_texto
+
 
 # ==============================================================================
 # 13. PROCESAMIENTO DE XISUS
@@ -497,6 +546,7 @@ if pregunta:
                 width=400
             )
 
+
     try:
 
         # ======================================================================
@@ -511,11 +561,13 @@ if pregunta:
                     personalidad_visual
                 ]
             }
+
         ]
 
-        # ----------------------------------------------------------------------
+
+        # ======================================================================
         # HISTORIAL
-        # ----------------------------------------------------------------------
+        # ======================================================================
 
         for mensaje in st.session_state.historial[-16:]:
 
@@ -526,13 +578,10 @@ if pregunta:
                 }
             )
 
+
         # ======================================================================
         # MENSAJE ACTUAL
         # ======================================================================
-
-        # ----------------------------------------------------------------------
-        # CON IMAGEN
-        # ----------------------------------------------------------------------
 
         if imagen is not None:
 
@@ -540,18 +589,31 @@ if pregunta:
                 imagen
             ).decode("utf-8")
 
-            # Intentar detectar JPEG/PNG
+
+            # Detectar formato
+
             if imagen.startswith(b"\x89PNG"):
+
                 tipo_imagen = "image/png"
+
             elif imagen.startswith(b"RIFF"):
+
                 tipo_imagen = "image/webp"
-            else:
+
+            elif imagen.startswith(b"\xff\xd8"):
+
                 tipo_imagen = "image/jpeg"
+
+            else:
+
+                tipo_imagen = "image/jpeg"
+
 
             imagen_data_url = (
                 f"data:{tipo_imagen};base64,"
                 f"{imagen_base64}"
             )
+
 
             contenido_usuario = [
 
@@ -569,13 +631,10 @@ if pregunta:
 
             ]
 
-        # ----------------------------------------------------------------------
-        # SOLO TEXTO
-        # ----------------------------------------------------------------------
-
         else:
 
             contenido_usuario = pregunta
+
 
         # ======================================================================
         # AÑADIR MENSAJE ACTUAL
@@ -588,18 +647,20 @@ if pregunta:
             }
         )
 
+
         # ======================================================================
         # SELECCIONAR MODELO
         # ======================================================================
 
         if imagen is not None:
 
-            # Los modelos de visión de Groq son Qwen.
+            # Modelo multimodal actual de Groq
             modelo_final = "qwen/qwen3.6-27b"
 
         else:
 
             modelo_final = modelo_visual
+
 
         # ======================================================================
         # GENERAR RESPUESTA
@@ -610,6 +671,7 @@ if pregunta:
             respuesta_completa = ""
 
             placeholder = st.empty()
+
 
             stream = cliente.chat.completions.create(
 
@@ -622,11 +684,14 @@ if pregunta:
                 max_completion_tokens=max_tokens,
 
                 stream=True
+
             )
+
 
             for chunk in stream:
 
                 if not chunk.choices:
+
                     continue
 
                 delta = chunk.choices[0].delta
@@ -639,8 +704,9 @@ if pregunta:
                         respuesta_completa
                     )
 
+
         # ======================================================================
-        # GUARDAR USUARIO
+        # GUARDAR MENSAJE DEL USUARIO
         # ======================================================================
 
         st.session_state.historial.append(
@@ -650,8 +716,9 @@ if pregunta:
             }
         )
 
+
         # ======================================================================
-        # GUARDAR XISUS
+        # GUARDAR RESPUESTA DE XISUS
         # ======================================================================
 
         st.session_state.historial.append(
@@ -661,19 +728,22 @@ if pregunta:
             }
         )
 
+
         # ======================================================================
-        # LIMPIAR IMAGEN
+        # LIMPIAR IMAGEN DESPUÉS DE USARLA
         # ======================================================================
 
         if imagen is not None:
 
             st.session_state.imagen_actual = None
 
+
         # ======================================================================
         # RECARGAR
         # ======================================================================
 
         st.rerun()
+
 
     except Exception as e:
 
@@ -684,3 +754,4 @@ if pregunta:
         st.caption(
             f"Error detectado: {e}"
         )
+```
